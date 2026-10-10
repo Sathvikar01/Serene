@@ -105,13 +105,21 @@ def make_investigation_rig(
     budget: InvestigationBudget | None = None,
     browse_allowlist: Sequence[str] = ("example.org",),
     store: Any = None,
+    clock: Any = None,
+    resume_counter: int = 0,
 ) -> InvestigationRig:
+    """`store`/`clock`/`resume_counter` simulate a process restart over an existing ledger."""
     from serene.adapters.hermes import ScriptedHermesTransport
     from serene.adapters.in_memory_event_store import InMemoryEventStore
     from serene.observability.telemetry import RecordingSink, SafeTelemetry
     from serene.testing import SyntheticFamily
 
-    family = SyntheticFamily(seed=seed, store=store or InMemoryEventStore())
+    family = (
+        SyntheticFamily(seed=seed, store=store or InMemoryEventStore())
+        if clock is None
+        else SyntheticFamily(seed=seed, store=store or InMemoryEventStore(), clock=clock)
+    )
+    family._counter = max(family._counter, resume_counter)  # never re-mint an existing id
     sink = RecordingSink()
     telemetry = SafeTelemetry(sink, pseudonym_key=PSEUDONYM_KEY)
     family.ledger._telemetry = telemetry

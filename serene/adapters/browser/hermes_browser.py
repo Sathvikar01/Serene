@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from collections.abc import Callable, Iterator
 from typing import Any, Final
 
@@ -106,16 +107,21 @@ class HermesBrowser:
         calls = response.tool_calls
         violations = self._audit(calls, request)
         if violations:
-            return self._result(request, "BLOCKED", (), len(calls), violations)
+            return self._result(request, "BLOCKED", (), len(calls), violations, calls)
         if len(calls) > request.max_actions:
             return self._result(
-                request, "BUDGET_EXHAUSTED", (), len(calls), (f"ACTIONS_USED:{len(calls)}",)
+                request,
+                "BUDGET_EXHAUSTED",
+                (),
+                len(calls),
+                (f"ACTIONS_USED:{len(calls)}",),
+                calls,
             )
         try:
             report = parse_wire(response.output_text, WireBrowseReport)
         except WireError as exc:
             return self._result(
-                request, "FAILED", (), len(calls), (f"WIRE_{exc.code.split(':', 1)[0]}",)
+                request, "FAILED", (), len(calls), (f"WIRE_{exc.code.split(':', 1)[0]}",), calls
             )
         visited = {_strip_fragment(u) for c in calls if c.name in _VISIT_TOOLS for u in _urls(c)}
         evidence: list[Evidence] = []
@@ -124,7 +130,7 @@ class HermesBrowser:
             if not domain_allowed(host_of(wc.url), request.allowed_domains):
                 # An off-allowlist capture is a bound violation, not a soft miss.
                 return self._result(
-                    request, "BLOCKED", (), len(calls), ("CAPTURE_DOMAIN_NOT_ALLOWED",)
+                    request, "BLOCKED", (), len(calls), ("CAPTURE_DOMAIN_NOT_ALLOWED",), calls
                 )
             if _strip_fragment(wc.url) not in visited:
                 reasons.append("CAPTURE_NOT_VISITED")
@@ -145,16 +151,17 @@ class HermesBrowser:
             evidence.append(self._evidence(request, wc.url, content))
         if not evidence:
             return self._result(
-                request, "NOT_FOUND", (), len(calls), tuple(reasons) or ("NO_CAPTURES",)
+                request, "NOT_FOUND", (), len(calls), tuple(reasons) or ("NO_CAPTURES",), calls
             )
-        return self._result(request, "ACQUIRED", tuple(evidence), len(calls), tuple(reasons))
+        return self._result(request, "ACQUIRED", tuple(evidence), len(calls), tuple(reasons), calls)
 
     # ------------------------------------------------------------------ internals
     def _run(self, request: EvidenceBrowseRequest) -> HermesResponse | str:
         body = _render_request(request)
         for attempt in range(1, self._max_retries + 2):
+            started = time.monotonic()
             try:
-                return self._transport.respond(
+                response = self._transport.respond(
                     HermesRequest(
                         purpose="browse",
                         instructions=_SYSTEM,
@@ -163,9 +170,42 @@ class HermesBrowser:
                     )
                 )
             except HermesTransportError as exc:
-                if exc.kind != "TRANSIENT" or attempt > self._max_retries:
+                retryable = exc.kind == "TRANSIENT" and attempt <= self._max_retries
+                self._call_trace(request, "FAILED", attempt, retryable, error_type=exc.kind)
+                if not retryable:
                     return f"TRANSPORT_{exc.kind}"
+                continue
+            self._call_trace(
+                request,
+                "OK",
+                attempt,
+                False,
+                duration_ms=response.latency_ms or int((time.monotonic() - started) * 1000),
+                input_tokens=response.usage.input_tokens or 0,
+                output_tokens=response.usage.output_tokens or 0,
+            )
+            return response
         return "TRANSPORT_TRANSIENT"  # pragma: no cover - loop always returns
+
+    def _call_trace(
+        self,
+        request: EvidenceBrowseRequest,
+        status: str,
+        attempt: int,
+        retryable: bool,
+        **extra: str | int,
+    ) -> None:
+        self._telemetry.emit(
+            "browser.call",
+            {
+                "child_id": request.child_id,
+                "request_id": request.request_id,
+                "status": status,
+                "attempt": attempt,
+                "retryable": retryable,
+                **extra,
+            },
+        )
 
     def _audit(
         self, calls: tuple[HermesToolCall, ...], request: EvidenceBrowseRequest
@@ -218,7 +258,10 @@ class HermesBrowser:
         evidence: tuple[Evidence, ...],
         actions: int,
         reasons: tuple[str, ...],
+        calls: tuple[HermesToolCall, ...] = (),
     ) -> EvidenceBrowseResult:
+        # Tool names and hosts only: never URL paths, queries or argument text.
+        hosts = sorted({h for c in calls for u in _urls(c) if (h := host_of(u))})
         self._telemetry.emit(
             "browser.acquire",
             {
@@ -229,6 +272,8 @@ class HermesBrowser:
                 "max_actions": request.max_actions,
                 "count": len(evidence),
                 "reason_codes": reasons,
+                "tool": tuple(sorted({_SAFE_NAME.sub("_", c.name)[:64] for c in calls})),
+                "domain": tuple(hosts),
             },
         )
         return EvidenceBrowseResult(
