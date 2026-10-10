@@ -94,12 +94,14 @@ class BaselineAgent:
         memory_rag: bool,
         budget: MatchedBudget,
         allowed_domains: tuple[str, ...],
+        pinned_sources: tuple[str, ...] = (),
     ) -> None:
         self.system = system
         self._transport = transport
         self._rag = memory_rag
         self.budget = budget
         self._allowed = allowed_domains
+        self._pinned = pinned_sources  # same pages Serene's planner/browser are given
 
     def run(
         self,
@@ -113,8 +115,13 @@ class BaselineAgent:
         without it the scenario's per-field answers are used."""
         fam = SyntheticFamily(seed=f"baseline-{seed}")
         browser = HermesBrowser(
-            self._transport, clock=fam.clock, observer=fam.system, new_entity_id=fam.new_id
+            self._transport,
+            clock=fam.clock,
+            observer=fam.system,
+            new_entity_id=fam.new_id,
+            pinned_sources=self._pinned,
         )
+        sources = f"BROWSE SOURCES: {json.dumps(list(self._pinned))}\n" if self._pinned else ""
         memory = _Memory()
         for i, text in enumerate(reports):
             memory.add(f"report-{i}", "REPORT", text)
@@ -139,7 +146,7 @@ class BaselineAgent:
                     HermesRequest(
                         purpose="propose",
                         instructions=_INSTRUCTIONS,
-                        input=f"QUESTION: {question}\n" + "\n".join(context),
+                        input=f"QUESTION: {question}\n" + sources + "\n".join(context),
                         session_ref=f"{self.system}-{seed}-{calls}",
                     )
                 )
@@ -232,21 +239,35 @@ def _dedupe(items: list[Any]) -> list[Any]:
     return out
 
 
-def baseline_a(transport: HermesTransport, budget: MatchedBudget | None = None) -> BaselineAgent:
+def baseline_a(
+    transport: HermesTransport,
+    budget: MatchedBudget | None = None,
+    *,
+    allowed_domains: tuple[str, ...] = ("example.org",),
+    pinned_sources: tuple[str, ...] = (),
+) -> BaselineAgent:
     return BaselineAgent(
         "baseline_a_plain_hermes",
         transport,
         memory_rag=False,
         budget=budget or MatchedBudget.from_serene(),
-        allowed_domains=("example.org",),
+        allowed_domains=allowed_domains,
+        pinned_sources=pinned_sources,
     )
 
 
-def baseline_b(transport: HermesTransport, budget: MatchedBudget | None = None) -> BaselineAgent:
+def baseline_b(
+    transport: HermesTransport,
+    budget: MatchedBudget | None = None,
+    *,
+    allowed_domains: tuple[str, ...] = ("example.org",),
+    pinned_sources: tuple[str, ...] = (),
+) -> BaselineAgent:
     return BaselineAgent(
         "baseline_b_hermes_memory_rag",
         transport,
         memory_rag=True,
         budget=budget or MatchedBudget.from_serene(),
-        allowed_domains=("example.org",),
+        allowed_domains=allowed_domains,
+        pinned_sources=pinned_sources,
     )

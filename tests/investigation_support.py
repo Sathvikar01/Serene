@@ -108,9 +108,11 @@ def make_investigation_rig(
     clock: Any = None,
     resume_counter: int = 0,
     transport: Any = None,
+    browse_sources: Sequence[str] = (),
 ) -> InvestigationRig:
     """`store`/`clock`/`resume_counter` simulate a process restart over an existing ledger.
-    `transport` replaces the scripted Hermes wire (live evaluation runs)."""
+    `transport` replaces the scripted Hermes wire (live evaluation runs);
+    `browse_sources` are the pinned pages the planner is told about."""
     from serene.adapters.hermes import ScriptedHermesTransport
     from serene.adapters.in_memory_event_store import InMemoryEventStore
     from serene.observability.telemetry import RecordingSink, SafeTelemetry
@@ -143,6 +145,7 @@ def make_investigation_rig(
             agent_actor=kernel_actors.agent,
             telemetry=telemetry,
             new_entity_id=family.new_id,
+            browse_sources=browse_sources,
         )
         holder["runtime"] = runtime
         return runtime

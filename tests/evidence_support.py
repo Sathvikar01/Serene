@@ -79,7 +79,9 @@ class FakeFetcher:
         return None if text is None else FetchedPage(url=url, text=text)
 
 
-def evidence_factory(fetcher: FakeFetcher | None = None, **kwargs: Any) -> Any:
+def evidence_factory(
+    fetcher: Any = None, *, pinned_sources: Sequence[str] = (), **kwargs: Any
+) -> Any:
     """`make_investigation_rig(evidence=...)` hook: browser + verifier + service."""
 
     def build(family: Any, telemetry: Any, transport: Any) -> EvidenceService:
@@ -89,6 +91,7 @@ def evidence_factory(fetcher: FakeFetcher | None = None, **kwargs: Any) -> Any:
             observer=family.system,
             telemetry=telemetry,
             new_entity_id=family.new_id,
+            pinned_sources=pinned_sources,
         )
         verifier = IndependentEvidenceVerifier(family.clock, fetcher=fetcher or FakeFetcher())
         return EvidenceService(

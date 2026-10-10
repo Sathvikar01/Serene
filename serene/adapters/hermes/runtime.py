@@ -162,6 +162,10 @@ hypotheses apart:
   "allowed_domains":["example.org"],"requested_fields":[tags],"rationale":str,
   "predictions":[...]}
 Do not rate value, cost or safety; Serene computes those."""
+_BROWSE_SOURCES = (
+    "\nBROWSE SOURCES (the only pages a BROWSE candidate may read; its allowed_domains "
+    "must be their host): "
+)
 
 
 def render_context(task: AgentTask, ctx: InvestigationContext) -> str:
@@ -224,6 +228,7 @@ class HermesAgentRuntime:
         max_repairs: int = 1,
         max_transport_retries: int = 1,
         hermes_home: str | None = None,
+        browse_sources: Sequence[str] = (),
     ) -> None:
         self.hermes_home = hermes_home
         self._transport = transport if transport is not None else transport_from_env()
@@ -242,6 +247,8 @@ class HermesAgentRuntime:
         self._max_repairs = max_repairs
         self._max_retries = max_transport_retries
         self.last_diagnostics = RunDiagnostics()
+        # Deployment-configured pages a BROWSE candidate may target (never model-supplied).
+        self._browse_sources = tuple(browse_sources)
 
     # ------------------------------------------------------------------ AgentRuntime
     def run(self, task: AgentTask) -> AgentRunResult:
@@ -282,6 +289,8 @@ class HermesAgentRuntime:
         diag = RunDiagnostics()
         self.last_diagnostics = diag
         body = render_context(task, context) + "\n\n" + _PLAN_CONTRACT
+        if self._browse_sources:
+            body += _BROWSE_SOURCES + json.dumps(list(self._browse_sources))
         outcome = self._call(task, "plan_evidence", body, WirePlan, diag)
         if isinstance(outcome, str):
             raise PlannerUnavailable(outcome)

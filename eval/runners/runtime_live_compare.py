@@ -36,9 +36,12 @@ if str(ROOT) not in sys.path:
 from eval.baselines.runtime_baselines import BASELINE_PROMPT_VERSION, MatchedBudget  # noqa: E402
 from eval.scenarios.runtime_live import (  # noqa: E402
     FAULTS,
+    LIVE_ALLOWED,
+    LIVE_SOURCES,
     PARENT_FACTS,
     SYSTEMS,
     LiveResult,
+    live_oracle,
 )
 from eval.scenarios.runtime_scenarios import SCENARIOS  # noqa: E402
 from eval.scorers.runtime_scorers import SCORER_VERSION, report_row  # noqa: E402
@@ -131,7 +134,7 @@ def main(argv: list[str] | None = None) -> int:
         for system in args.systems.split(","):
             run_id = f"{out.name}__{system}__{sid}"
             result = SYSTEMS[system](sid, live)
-            row = report_row(result.trajectory, SCENARIOS[sid].oracle)
+            row = report_row(result.trajectory, live_oracle(sid))
             ok = [e["response"] for e in result.exchanges if "response" in e]
             models |= {str(r["model"]) for r in ok if r["model"]}
             row["mode"] = "live-model"
@@ -181,6 +184,8 @@ def main(argv: list[str] | None = None) -> int:
         "matched_budget": MatchedBudget.from_serene().__dict__,
         "faults": {sid: FAULTS[sid].__dict__ for sid in args.scenarios.split(",")},
         "parent_facts": {sid: PARENT_FACTS[sid] for sid in args.scenarios.split(",")},
+        "evidence_sources": list(LIVE_SOURCES),
+        "browse_allowlist": list(LIVE_ALLOWED),
         "sampling": "Hermes server defaults (not pinned by the client)",
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str), "utf-8")

@@ -10,7 +10,10 @@ and audits it, and turns what it reports into *unverified* L0 evidence:
   number of calls must not exceed `max_actions`. A violation discards the whole
   run (BLOCKED / BUDGET_EXHAUSTED) - nothing it saw becomes evidence;
 - each capture must be on an allowed domain and must be a page a tool actually
-  opened; it is rendered into the canonical capture text and digested.
+  opened; it is rendered into the canonical capture text and digested;
+- optional `pinned_sources` narrow the allowlist from domains to exact URLs:
+  they are named in the prompt, and any other URL a tool touched discards the
+  run (URL_NOT_PINNED). Admission stays domain-level; pinning only narrows.
 
 The browser never verifies and never calls the verifier. Page text is untrusted
 data; it is delimited in the prompt and never parsed as instructions here.
@@ -21,7 +24,7 @@ from __future__ import annotations
 import json
 import re
 import time
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Sequence
 from typing import Any, Final
 
 from serene.adapters.hermes.transport import (
@@ -92,6 +95,7 @@ class HermesBrowser:
         telemetry: SafeTelemetry | None = None,
         new_entity_id: Callable[[str], str] = new_id,
         max_transport_retries: int = 1,
+        pinned_sources: Sequence[str] = (),
     ) -> None:
         self._transport = transport
         self._clock = clock
@@ -99,6 +103,7 @@ class HermesBrowser:
         self._telemetry = telemetry or SafeTelemetry()
         self._new_id = new_entity_id
         self._max_retries = max_transport_retries
+        self._pinned = tuple(sorted({_strip_fragment(u) for u in pinned_sources}))
 
     def acquire(self, request: EvidenceBrowseRequest) -> EvidenceBrowseResult:
         response = self._run(request)
@@ -157,7 +162,7 @@ class HermesBrowser:
 
     # ------------------------------------------------------------------ internals
     def _run(self, request: EvidenceBrowseRequest) -> HermesResponse | str:
-        body = _render_request(request)
+        body = _render_request(request, self._pinned)
         for attempt in range(1, self._max_retries + 2):
             started = time.monotonic()
             try:
@@ -223,6 +228,8 @@ class HermesBrowser:
             for url in _urls(call):
                 if not domain_allowed(host_of(url), request.allowed_domains):
                     reasons.append("DOMAIN_NOT_ALLOWED")
+                elif self._pinned and _strip_fragment(url) not in self._pinned:
+                    reasons.append("URL_NOT_PINNED")
         return tuple(dict.fromkeys(reasons))
 
     def _evidence(self, request: EvidenceBrowseRequest, url: str, content: str) -> Evidence:
@@ -285,8 +292,8 @@ class HermesBrowser:
         )
 
 
-def _render_request(request: EvidenceBrowseRequest) -> str:
-    bounds = {
+def _render_request(request: EvidenceBrowseRequest, pinned: tuple[str, ...] = ()) -> str:
+    bounds: dict[str, Any] = {
         "goal": request.goal,
         "subject": request.subject,
         "requested_fields": list(request.requested_fields),
@@ -295,9 +302,12 @@ def _render_request(request: EvidenceBrowseRequest) -> str:
         "forbidden_actions": list(request.forbidden_actions),
         "max_age_days": request.max_age_days,
     }
+    if pinned:
+        bounds["pinned_sources"] = list(pinned)  # the only URLs that may be opened
+    pin_rule = "Open only the pinned_sources URLs; any other URL voids the run.\n" if pinned else ""
     return (
         f"BROWSE TASK (prompt {BROWSER_PROMPT_VERSION})\n"
-        f"{json.dumps(bounds, sort_keys=True)}\n\n"
+        f"{json.dumps(bounds, sort_keys=True)}\n{pin_rule}\n"
         f'Reply with ONE JSON object: {{"contract": "{WIRE_VERSION}", "captures": [\n'
         '  {"url": "https://<allowed domain>/...", "subject": "<the subject tag>",\n'
         '   "effective_date": "YYYY-MM-DD (the date the page says it applies from)",\n'

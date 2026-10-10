@@ -155,8 +155,12 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
 * Live runs: `eval/scenarios/runtime_live.py` + `eval/runners/runtime_live_compare.py --label <x>`
   run the same six scenarios with every model call sent to the Hermes API server (no
   scripted replies) for Serene and both baselines: one simulated parent (`ParentSim`,
-  runtime-visible facts only), the same injected environment faults, the real web on
-  the same allowlist. Each run keeps the raw exchanges, the redacted trace and the
+  runtime-visible facts only), the same injected environment faults, and one
+  synthetic evidence page (`eval/fixtures/pages/`) read from its immutable
+  raw.githubusercontent.com URL at a pinned commit SHA (`LIVE_SOURCES`, tag
+  `eval-live-pages-v1`). The planner and every browser are told that URL as
+  `pinned_sources`; a browse touching any other URL is BLOCKED (`URL_NOT_PINNED`)
+  and the verifier re-fetches nothing else. Each run keeps the raw exchanges, the redacted trace and the
   scorer rows under `eval/reports/local/live/` (and sends the trace to neatlogs when
   `NEATLOGS_API_KEY` is set; the run id is the neatlogs session id).
 * `uv run python eval/runners/runtime_compare.py` writes

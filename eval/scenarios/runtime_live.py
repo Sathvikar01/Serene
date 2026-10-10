@@ -7,8 +7,12 @@ the model proposes is what happens. All three systems get the same inputs:
 - the same three parent reports and question (`REPORTS`, `QUESTION`);
 - the same simulated parent (`ParentSim`): it answers from the scenario's
   runtime-visible facts by keyword, never from the grader-only oracle;
-- the same Hermes endpoint, the same bounded browser and the real web on the
-  same allowlist;
+- the same Hermes endpoint and the same bounded browser, pinned to ONE
+  synthetic evidence page (`LIVE_SOURCES`): an immutable
+  raw.githubusercontent.com URL at a fixed commit SHA of this public repo.
+  Serene's planner and every system's browser are told that URL; any other
+  URL a browse touches voids that browse (URL_NOT_PINNED), and the
+  verifier's re-fetch reads nothing else;
 - the same injected environment faults (`Faults`) where the system has the
   component the fault targets (a verifier re-fetch fault cannot affect a system
   that never re-fetches; that is recorded, not hidden).
@@ -19,6 +23,7 @@ diagnosed without calling the model again. Nothing here is a scripted reply.
 
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import time
@@ -53,6 +58,15 @@ MAX_TICKS: Final = 12
 SILENCE: Final = timedelta(hours=49)
 BUTTON: Final = {"YES": 0, "NO": 1, "UNSURE": 2}
 _TERMINAL: Final = frozenset(p.value for p in TERMINAL_INVESTIGATION_PHASES)
+
+# eval/fixtures/pages/ at commit 156030d (tag eval-live-pages-v1): fictional page,
+# no real family data. Pinned by SHA so the evidence can never change under a run.
+LIVE_PAGES_SHA: Final = "156030d11d2cb8a482239621c372bebae68f77c3"
+LIVE_SOURCES: Final = (
+    f"https://raw.githubusercontent.com/Sathvikar01/morrow/{LIVE_PAGES_SHA}"
+    "/eval/fixtures/pages/daycare-pickup-policy.html",
+)
+LIVE_ALLOWED: Final = ("raw.githubusercontent.com",)
 
 # Runtime-visible parent knowledge per scenario: (keywords, answer). The first rule
 # whose keywords all appear in the question/fields wins; otherwise "UNSURE".
@@ -168,6 +182,37 @@ def _url(arguments: str) -> str:
     return str(value.get("url", "")) if isinstance(value, dict) else ""
 
 
+class _PinnedFetcher:
+    """The verifier's independent https re-fetch, limited to the pinned pages."""
+
+    def __init__(self) -> None:
+        self._inner = SafeHttpsFetcher()
+
+    def fetch(self, url: str, allowed_domains: tuple[str, ...]) -> FetchedPage | None:
+        if url.split("#", 1)[0] not in LIVE_SOURCES:
+            return None
+        return self._inner.fetch(url, allowed_domains)
+
+
+def live_oracle(scenario_id: str) -> Any:
+    """The frozen oracle, with its browse allowlist moved to the pinned live host."""
+    oracle = SCENARIOS[scenario_id].oracle
+    if not oracle.allowed_domains:
+        return oracle
+    return dataclasses.replace(oracle, allowed_domains=LIVE_ALLOWED)
+
+
+def _rig(scenario_id: str, transport: Any, fetcher: Any, **kwargs: Any) -> Any:
+    return make_investigation_rig(
+        f"live-{scenario_id}",
+        evidence=evidence_factory(fetcher, pinned_sources=LIVE_SOURCES),
+        browse_allowlist=LIVE_ALLOWED,
+        browse_sources=LIVE_SOURCES,
+        transport=transport,
+        **kwargs,
+    )
+
+
 class _MovedPageFetcher:
     """The page changed between capture and verification (environment fault)."""
 
@@ -191,12 +236,10 @@ def run_serene_live(scenario_id: str, live: HermesTransport) -> LiveResult:
     faults = FAULTS[scenario_id]
     parent = ParentSim(scenario_id)
     transport = RecordingTransport(live, faults, system="serene")
-    fetcher = _MovedPageFetcher() if faults.page_changed_before_verification else SafeHttpsFetcher()
+    fetcher = _MovedPageFetcher() if faults.page_changed_before_verification else _PinnedFetcher()
     started = time.monotonic()
     notes: list[str] = []
-    rig = make_investigation_rig(
-        f"live-{scenario_id}", evidence=evidence_factory(fetcher), transport=transport
-    )
+    rig = _rig(scenario_id, transport, fetcher)
     script = TelegramScript(rig)
     for text, _ in REPORTS:
         notes.append(f"report:{script.say(text).outcome}")
@@ -261,13 +304,13 @@ def _restart(
 ) -> SereneRun:
     """A fresh process over the same ledger store: nothing carried over but the ledger."""
     old = run.rig
-    rig = make_investigation_rig(
-        f"live-{scenario_id}",
-        evidence=evidence_factory(fetcher),
+    rig = _rig(
+        scenario_id,
+        transport,
+        fetcher,
         store=old.family.store,
         clock=old.family.clock,
         resume_counter=old.family._counter,
-        transport=transport,
     )
     rig.sink.records[:0] = old.sink.records  # one trace stream for the whole logical task
     resumed = SereneRun(rig, run.investigation_id, TelegramScript(rig), steps=run.steps)
@@ -281,7 +324,9 @@ def run_baseline_live(
 ) -> LiveResult:
     faults = FAULTS[scenario_id]
     transport = RecordingTransport(live, faults, system=which)
-    agent = (baseline_a if which == "baseline_a" else baseline_b)(transport, budget)
+    agent = (baseline_a if which == "baseline_a" else baseline_b)(
+        transport, budget, allowed_domains=LIVE_ALLOWED, pinned_sources=LIVE_SOURCES
+    )
     parent = ParentSim(scenario_id)
     started = time.monotonic()
     trajectory = agent.run(
