@@ -62,6 +62,10 @@ DEFAULT_MAX_ACTIONS: Final = 12
 _RETRYABLE: Final = frozenset({AcquisitionFailure.TRANSIENT, AcquisitionFailure.MALFORMED})
 # Browser FAILED results whose reasons show the reply itself was unusable.
 _MALFORMED_PREFIXES: Final = ("WIRE_", "CAPTURE_")
+# ...or that the model runtime refused service: retrying cannot help until an operator acts.
+_UNAVAILABLE_REASONS: Final = frozenset(
+    {"TRANSPORT_AUTH", "TRANSPORT_REFUSED", "TRANSPORT_PROTOCOL"}
+)
 _STATUS_FAILURE: Final = {
     "NOT_FOUND": AcquisitionFailure.NOT_FOUND,
     "BLOCKED": AcquisitionFailure.BLOCKED,
@@ -146,10 +150,11 @@ class EvidenceService:
             return self._fail(child_id, request_id, attempt, AcquisitionFailure.MALFORMED, problems)
         if result.status != "ACQUIRED":
             failure = _STATUS_FAILURE[result.status]
-            if failure is AcquisitionFailure.TRANSIENT and any(
-                r.startswith(_MALFORMED_PREFIXES) for r in result.reason_codes
-            ):
-                failure = AcquisitionFailure.MALFORMED
+            if failure is AcquisitionFailure.TRANSIENT:
+                if _UNAVAILABLE_REASONS.intersection(result.reason_codes):
+                    failure = AcquisitionFailure.UNAVAILABLE
+                elif any(r.startswith(_MALFORMED_PREFIXES) for r in result.reason_codes):
+                    failure = AcquisitionFailure.MALFORMED
             return self._fail(
                 child_id,
                 request_id,

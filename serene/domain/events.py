@@ -192,6 +192,7 @@ class AcquisitionFailure(StrEnum):
     BLOCKED = "BLOCKED"  # a bound (domain/forbidden action) was violated; permanent
     BUDGET_EXHAUSTED = "BUDGET_EXHAUSTED"
     MALFORMED = "MALFORMED"  # the browser result failed validation
+    UNAVAILABLE = "UNAVAILABLE"  # the model runtime refused service (auth/refusal/protocol)
 
 
 class EvidenceAcquisitionFailed(_Payload):

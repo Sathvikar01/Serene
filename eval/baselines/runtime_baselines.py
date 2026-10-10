@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Final
 
@@ -100,7 +101,16 @@ class BaselineAgent:
         self.budget = budget
         self._allowed = allowed_domains
 
-    def run(self, scenario: Any, reports: tuple[str, ...], question: str, seed: str) -> Any:
+    def run(
+        self,
+        scenario: Any,
+        reports: tuple[str, ...],
+        question: str,
+        seed: str,
+        parent: Callable[[str, tuple[str, ...]], str | None] | None = None,
+    ) -> Any:
+        """`parent` answers a question (live runs share one simulated parent with Serene);
+        without it the scenario's per-field answers are used."""
         fam = SyntheticFamily(seed=f"baseline-{seed}")
         browser = HermesBrowser(
             self._transport, clock=fam.clock, observer=fam.system, new_entity_id=fam.new_id
@@ -146,8 +156,11 @@ class BaselineAgent:
             fields = tuple(str(f) for f in action.get("fields") or ())[:4] or ("unspecified",)
             if kind == "ask" and len(questions) < self.budget.max_questions:
                 questions.append(fields)
-                answers = [scenario.parent_answers.get(f) for f in fields]
-                said = ", ".join(a for a in answers if a) or None
+                if parent is not None:
+                    said = parent(str(action.get("question") or ""), fields)
+                else:
+                    answers = [scenario.parent_answers.get(f) for f in fields]
+                    said = ", ".join(a for a in answers if a) or None
                 transcript.append(f"PARENT ANSWER: {said or '(no reply)'}")
                 if said:
                     memory.add(f"answer-{len(questions)}", "ANSWER", said)

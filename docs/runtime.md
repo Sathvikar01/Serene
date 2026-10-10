@@ -102,10 +102,12 @@ Without a fetcher the verifier fails closed (`REFETCH_UNAVAILABLE`).
 | --- | --- | --- |
 | Hermes transport TRANSIENT | 1 bounded retry, then FAILED | `runtime.call` / `browser.call` `retryable` |
 | Hermes AUTH / PROTOCOL / REFUSED | no retry; run fails closed | `runtime.run` `reason_codes` |
+| Hermes provider failure (HTTP 200, `completed`, zero usage, one warning line) | classified by the transport as AUTH / TRANSIENT / PROTOCOL, never read as model output | `runtime.call error_type`, `TRANSPORT_AUTH` |
 | Malformed model output | one repair with a safe error code (reasoning); browse: attempt counted as MALFORMED | `WIRE_*` codes |
 | Model executed a tool while reasoning | whole run discarded | `TOOLS_NOT_PERMITTED` |
 | Browse TRANSIENT/MALFORMED | ledger-counted retry (default 3 attempts), next scheduler tick | `EVIDENCE_ACQUISITION_FAILED retryable=true` |
 | Browse BLOCKED/NOT_FOUND/BUDGET_EXHAUSTED | request exhausted; back to NEEDS_EVIDENCE | `retryable=false` |
+| Browse while the model runtime refuses service (AUTH/REFUSED/PROTOCOL) | `UNAVAILABLE`, not retried | `retryable=false` |
 | Verifier error / unsupported page | evidence REJECTED; never used | `EVIDENCE_REJECTED` |
 | Planner unavailable | PARKED_UNRESOLVED (never "sufficient") | `PLANNER_UNAVAILABLE` |
 | Parent silent past 48 h | PARKED_UNRESOLVED | `PARENT_NO_RESPONSE` |
@@ -150,6 +152,13 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
 * Baselines: `eval/baselines/runtime_baselines.py` (A plain Hermes, B + memory/RAG),
   same transport/browser/parent and `MatchedBudget.from_serene()`.
 * `uv run inspect eval eval/tasks/runtime_investigation.py --model mockllm/model`
+* Live runs: `eval/scenarios/runtime_live.py` + `eval/runners/runtime_live_compare.py --label <x>`
+  run the same six scenarios with every model call sent to the Hermes API server (no
+  scripted replies) for Serene and both baselines: one simulated parent (`ParentSim`,
+  runtime-visible facts only), the same injected environment faults, the real web on
+  the same allowlist. Each run keeps the raw exchanges, the redacted trace and the
+  scorer rows under `eval/reports/local/live/` (and sends the trace to neatlogs when
+  `NEATLOGS_API_KEY` is set, `NEATLOGS_SESSION_ID` = the run id).
 * `uv run python eval/runners/runtime_compare.py` writes
   `eval/reports/local/runtime_compare.json`. Baseline rows are `UNAVAILABLE` until
   a live Hermes API server is configured: scripted baseline replies would be an

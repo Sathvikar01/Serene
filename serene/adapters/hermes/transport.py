@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.request
@@ -25,6 +26,30 @@ MAX_RESPONSE_BYTES: Final = 1_000_000
 DEFAULT_BASE_URL: Final = "http://127.0.0.1:8642/v1"
 
 FailureKind = Literal["TRANSIENT", "AUTH", "PROTOCOL", "REFUSED"]
+
+# Hermes reports a provider failure (no credentials, rate limit, provider down) as a
+# *completed* response whose only output is a "⚠️ <label>: <error>" line and whose
+# usage is zero: no model ran. Without this check that line would be read as model
+# output, blamed on the model (WIRE_NOT_JSON), repaired and retried. Labels per
+# hermes-agent v0.21.6 `gateway/platforms/api_server.py` and `gateway/run.py`.
+_ENVELOPE_PREFIX: Final = "\u26a0"  # WARNING SIGN
+_PROVIDER_FAILURES: Final[tuple[tuple[re.Pattern[str], FailureKind, str], ...]] = (
+    (
+        re.compile(r"provider\s+authentication\s+failed|(in(valid|correct))\s+api\s+key", re.I),
+        "AUTH",
+        "PROVIDER_AUTH",
+    ),
+    (
+        re.compile(r"rate[\s-]+limit|quota|usage\s+limit|\b429\b", re.I),
+        "TRANSIENT",
+        "PROVIDER_RATE_LIMITED",
+    ),
+    (
+        re.compile(r"connection\s+(refused|reset|error|timeout)|unreachable|timed?\s*out", re.I),
+        "TRANSIENT",
+        "PROVIDER_UNREACHABLE",
+    ),
+)
 
 
 class HermesTransportError(RuntimeError):
@@ -127,6 +152,8 @@ def parse_responses_payload(data: Any, *, latency_ms: int = 0) -> HermesResponse
     )
     raw_usage = data.get("usage")
     usage: dict[str, Any] = raw_usage if isinstance(raw_usage, dict) else {}
+    if not tool_calls:
+        _raise_on_provider_failure("".join(texts), usage)
     raw_runtime = data.get("runtime")
     runtime: dict[str, Any] = raw_runtime if isinstance(raw_runtime, dict) else {}
     return HermesResponse(
@@ -140,6 +167,18 @@ def parse_responses_payload(data: Any, *, latency_ms: int = 0) -> HermesResponse
         status=status,
         latency_ms=latency_ms,
     )
+
+
+def _raise_on_provider_failure(text: str, usage: dict[str, Any]) -> None:
+    """A zero-usage "⚠️ ..." reply is Hermes reporting that no model ran."""
+    if not text.lstrip().startswith(_ENVELOPE_PREFIX):
+        return
+    if any(_int_or_none(usage.get(k)) for k in ("input_tokens", "output_tokens")):
+        return  # a model produced this text; it is model output, not an envelope
+    for pattern, kind, code in _PROVIDER_FAILURES:
+        if pattern.search(text):
+            raise HermesTransportError(kind, code)
+    raise HermesTransportError("PROTOCOL", "PROVIDER_FAILURE")
 
 
 def _int_or_none(value: Any) -> int | None:

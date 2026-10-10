@@ -107,8 +107,10 @@ def make_investigation_rig(
     store: Any = None,
     clock: Any = None,
     resume_counter: int = 0,
+    transport: Any = None,
 ) -> InvestigationRig:
-    """`store`/`clock`/`resume_counter` simulate a process restart over an existing ledger."""
+    """`store`/`clock`/`resume_counter` simulate a process restart over an existing ledger.
+    `transport` replaces the scripted Hermes wire (live evaluation runs)."""
     from serene.adapters.hermes import ScriptedHermesTransport
     from serene.adapters.in_memory_event_store import InMemoryEventStore
     from serene.observability.telemetry import RecordingSink, SafeTelemetry
@@ -123,7 +125,7 @@ def make_investigation_rig(
     sink = RecordingSink()
     telemetry = SafeTelemetry(sink, pseudonym_key=PSEUDONYM_KEY)
     family.ledger._telemetry = telemetry
-    transport = ScriptedHermesTransport()
+    transport = transport if transport is not None else ScriptedHermesTransport()
     actors = KernelActors(agent=family.agent, system=family.system, verifier=family.verifier)
     holder: dict[str, HermesAgentRuntime] = {}
 

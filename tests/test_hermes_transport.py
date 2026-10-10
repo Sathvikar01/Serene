@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -129,3 +131,53 @@ def test_installed_hermes_responses_shape_is_parsed() -> None:
     (call,) = response.tool_calls
     assert (call.name, call.output) == ("web_extract", "Pickup 15:00-17:30")
     assert response.usage.output_tokens == 3
+
+
+# --------------------------------------------------------------- provider-failure envelopes
+_FIXTURES = Path(__file__).parent / "fixtures"
+_WARN = "\u26a0\ufe0f"  # WARNING SIGN + VS16, as Hermes renders it
+
+
+def _envelope(text: str, usage: dict[str, int] | None = None) -> dict[str, Any]:
+    return {
+        "id": "resp_x",
+        "object": "response",
+        "status": "completed",
+        "model": "hermes-agent",
+        "output": [
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": text}],
+            }
+        ],
+        "usage": usage or {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+    }
+
+
+def test_captured_provider_auth_envelope_is_an_auth_failure_not_model_output() -> None:
+    """Captured from the live hermes-agent v0.21.6 API server with no provider
+    credentials (2026-10-10): HTTP 200, status "completed", zero usage."""
+    payload = json.loads((_FIXTURES / "hermes_provider_auth_failure.json").read_text("utf-8"))
+    with pytest.raises(HermesTransportError) as exc:
+        parse_responses_payload(payload)
+    assert (exc.value.kind, exc.value.code) == ("AUTH", "PROVIDER_AUTH")
+
+
+@pytest.mark.parametrize(
+    ("text", "kind", "code"),
+    [
+        (f"{_WARN} Provider rate-limited: 429 Too Many", "TRANSIENT", "PROVIDER_RATE_LIMITED"),
+        (f"{_WARN} Provider error: Connection refused", "TRANSIENT", "PROVIDER_UNREACHABLE"),
+        (f"{_WARN} Something unexpected happened", "PROTOCOL", "PROVIDER_FAILURE"),
+    ],
+)
+def test_provider_failure_envelopes_are_classified(text: str, kind: str, code: str) -> None:
+    with pytest.raises(HermesTransportError) as exc:
+        parse_responses_payload(_envelope(text))
+    assert (exc.value.kind, exc.value.code) == (kind, code)
+
+
+def test_model_text_with_a_warning_sign_is_still_model_output() -> None:
+    payload = _envelope(f"{_WARN} careful", usage={"input_tokens": 12, "output_tokens": 3})
+    assert parse_responses_payload(payload).output_text == f"{_WARN} careful"

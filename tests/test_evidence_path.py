@@ -9,7 +9,11 @@ from typing import Any
 import pytest
 
 from serene.adapters.browser import HermesBrowser, SafeHttpsFetcher, visible_text
-from serene.adapters.hermes import HermesTransportError, ScriptedHermesTransport
+from serene.adapters.hermes import (
+    HermesTransportError,
+    ScriptedHermesTransport,
+    parse_responses_payload,
+)
 from serene.adapters.hermes.scripted import raw_response
 from serene.domain.canonical import sha256_hex
 from serene.domain.entities import InvestigationPhase as P
@@ -41,6 +45,7 @@ from tests.investigation_support import (
     plan_reply,
 )
 from tests.test_investigation import HUNGER, TRANSITION, _report_three
+from tests.test_provider_outage import PAYLOAD as OUTAGE
 
 
 # ---------------------------------------------------------------- fixtures
@@ -403,6 +408,21 @@ def test_retry_budget_exhausts_and_returns_to_needs_evidence() -> None:
         and e.payload["from_phase"] == "RESEARCHING"
     ]
     assert ["ACQUISITION_EXHAUSTED"] in reasons
+
+
+def test_provider_outage_during_browse_is_unavailable_and_not_retried() -> None:
+    """Live-observed Hermes provider-auth envelope (tests/test_provider_outage.py)."""
+    rig, inv = _open_browse("browse-outage")
+    rig.transport.push("browse", lambda request: parse_responses_payload(OUTAGE))
+    rig.stack.investigations.drive(rig.family.child_id, inv)
+    failures = [
+        e.payload for e in rig.events() if e.event_type is EventType.EVIDENCE_ACQUISITION_FAILED
+    ]
+    assert [(f["attempt"], f["failure"], f["retryable"]) for f in failures] == [
+        (1, AcquisitionFailure.UNAVAILABLE.value, False)
+    ]
+    assert list(failures[0]["reason_codes"]) == ["TRANSPORT_AUTH"]
+    assert sum(1 for r in rig.transport.requests if r.purpose == "browse") == 1
 
 
 def test_blocked_browse_exhausts_immediately_and_records_nothing() -> None:
