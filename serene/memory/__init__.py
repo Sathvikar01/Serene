@@ -1,4 +1,4 @@
-"""Morrow Memory Repo: Git + Markdown durable memory, and the Dream pipeline.
+"""Serene Memory Repo: Git + Markdown durable memory, and the Dream pipeline.
 
 Memory is written only by the single-writer Memory Committer. Dreaming and
 Investigation propose patches; they never silently rewrite trusted memory.
