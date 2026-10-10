@@ -162,7 +162,10 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
   `pinned_sources`; a browse touching any other URL is BLOCKED (`URL_NOT_PINNED`)
   and the verifier re-fetches nothing else. Each run keeps the raw exchanges, the redacted trace and the
   scorer rows under `eval/reports/local/live/` (and sends the trace to neatlogs when
-  `NEATLOGS_API_KEY` is set; the run id is the neatlogs session id).
+  `NEATLOGS_API_KEY` is set, in batches under its ~8 KiB body limit; the run id is
+  the neatlogs session id). `eval/runners/browse_prompt_ab.py` replays recorded
+  browse requests live under two prompts. Measured results:
+  [live-eval-2026-10-10.md](live-eval-2026-10-10.md).
 * `uv run python eval/runners/runtime_compare.py` writes
   `eval/reports/local/runtime_compare.json`. Baseline rows are `UNAVAILABLE` until
   a live Hermes API server is configured: scripted baseline replies would be an

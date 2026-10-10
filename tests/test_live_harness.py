@@ -100,3 +100,32 @@ def test_neatlogs_upload_is_split_under_the_ingest_body_limit(monkeypatch: Any) 
     for batch in sink.posted:
         size = sum(len(json.dumps({"name": n, "attributes": a})) for n, a in batch)
         assert size <= runner._NEATLOGS_BATCH_BYTES
+
+
+def test_browse_ab_replays_exactly_the_recorded_request_bounds(tmp_path: Path) -> None:
+    from eval.runners.browse_prompt_ab import recorded_browse_inputs, request_from
+    from serene.adapters.browser.hermes_browser import _render_request
+    from serene.ports.evidence import EvidenceBrowseRequest
+    from serene.testing import SyntheticFamily
+
+    fam = SyntheticFamily(seed="ab")
+    original = EvidenceBrowseRequest(
+        request_id=fam.new_id("erq"),
+        child_id=fam.child_id,
+        goal="Find the daycare pickup window",
+        subject="daycare_pickup",
+        requested_fields=("pickup_window", "snack_time"),
+        allowed_domains=LIVE_ALLOWED,
+        max_actions=5,
+        max_age_days=365,
+    )
+    recorded = _render_request(original, LIVE_SOURCES)
+    (tmp_path / "raw").mkdir()
+    lines = [{"purpose": "propose", "input": "x"}, {"purpose": "browse", "input": recorded}]
+    (tmp_path / "raw" / "serene__s.jsonl").write_text(
+        "\n".join(json.dumps(x) for x in lines), encoding="utf-8"
+    )
+    (only,) = recorded_browse_inputs([str(tmp_path)])
+    rebuilt = request_from(only, fam)
+    assert rebuilt.request_id != original.request_id  # a fresh request, same bounds
+    assert _render_request(rebuilt, LIVE_SOURCES) == recorded
