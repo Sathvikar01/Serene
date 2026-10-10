@@ -43,10 +43,11 @@ from serene.domain.values import (
 from serene.investigation.boundary import KernelBoundary
 from serene.ledger.service import EventLedger
 from serene.observability.telemetry import SafeTelemetry
-from serene.ports.agent_runtime import AgentRuntime, AgentTask
+from serene.ports.agent_runtime import AgentRuntime, AgentTask, ProposalKind
 from serene.ports.clock import Clock
 
 MAX_STRUCTURING_ATTEMPTS: Final = 3
+_STRUCTURING_KINDS: Final[tuple[ProposalKind, ...]] = ("observation", "abstain")
 
 
 @dataclass(frozen=True, slots=True)
@@ -158,12 +159,13 @@ class ObservationIngestion:
             context_entity_ids=(evidence_id,),
             max_steps=3,
             max_cost_micro_usd=2_000_000,
+            proposal_kinds=_STRUCTURING_KINDS,
         )
         try:
             result = self._runtime.run(task)
         except Exception as exc:  # the runtime is untrusted infrastructure
             return self._fail(child_id, evidence_id, attempt, (f"RUNTIME_{type(exc).__name__}",))
-        report = self._boundary.admit(task, result, allowed_kinds={"observation", "abstain"})
+        report = self._boundary.admit(task, result, allowed_kinds=set(_STRUCTURING_KINDS))
         entities = self._ledger.replay_events(child_id).entities
         admitted = tuple(
             o.entity_id

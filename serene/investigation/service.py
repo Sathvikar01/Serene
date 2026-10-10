@@ -67,7 +67,7 @@ from serene.investigation.minimum_data import EvidencePlanner, MinimumDataPolicy
 from serene.ledger.service import AdmissionRejected, EventLedger
 from serene.observability.telemetry import SafeTelemetry
 from serene.policies.investigation import active_hypotheses, latest_request
-from serene.ports.agent_runtime import AgentRuntime, AgentTask
+from serene.ports.agent_runtime import AgentRuntime, AgentTask, ProposalKind
 from serene.ports.clock import Clock
 from serene.projections.state import ExperimentStatus, KernelState, LifecycleStatus
 
@@ -483,7 +483,7 @@ class InvestigationService:
         *,
         phase: InvestigationPhase,
         goal: str,
-        kinds: set[str],
+        kinds: set[ProposalKind],
     ) -> BoundaryReport | StepResult:
         used = self._model_runs_used(child, inv)
         if used >= self._budget.max_model_runs:
@@ -495,6 +495,7 @@ class InvestigationService:
             goal=goal,
             max_steps=self._budget.model_steps,
             max_cost_micro_usd=self._budget.model_cost_micro_usd,
+            proposal_kinds=tuple(sorted(kinds)),
         )
         try:
             result = self._runtime.run(task)

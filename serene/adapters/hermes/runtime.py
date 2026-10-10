@@ -8,8 +8,9 @@ infrastructure. This adapter:
    as untrusted data, and asks Hermes for the versioned wire contract;
 2. audits the run: no tool may execute during reasoning, step and cost
    budgets are enforced, transport failures are classified and retried within
-   a finite budget, malformed output gets one bounded repair with a safe error
-   code (never the model's own text) and otherwise fails closed;
+   a finite budget, malformed output gets one bounded repair whose feedback
+   names only schema locations, validation types and schema bounds (never the
+   model's own text), and otherwise fails closed;
 3. mints kernel ids and builds typed `AgentProposal`s whose references must
    all have been visible in the rendered context.
 
@@ -46,6 +47,8 @@ from serene.adapters.hermes.wire import (
     WirePlan,
     WireProposals,
     parse_wire,
+    plan_contract,
+    propose_contract,
 )
 from serene.domain.base import new_id
 from serene.domain.entities import (
@@ -74,7 +77,9 @@ from serene.ports.agent_runtime import (
 )
 from serene.ports.clock import Clock
 
-PROMPT_VERSION: Final = "serene-hermes/1"
+# /2: the reply schema is rendered from the wire models (exact enums and bounds, only
+# the task's proposal kinds) and a rejected reply is repaired with field-level issues.
+PROMPT_VERSION: Final = "serene-hermes/2"
 HERMES_RUNTIME: Final = "hermes-agent@v2026.9.24"
 
 ContextProvider = Callable[[AgentTask], InvestigationContext]
@@ -111,6 +116,8 @@ class RunDiagnostics:
 
     attempts: int = 0
     wire_errors: list[str] = field(default_factory=list)
+    # Schema location + validation type of each rejected reply (no model text).
+    wire_issues: list[str] = field(default_factory=list)
     item_errors: list[str] = field(default_factory=list)
     transport_errors: list[str] = field(default_factory=list)
     input_tokens: int = 0
@@ -133,39 +140,44 @@ Rules:
 - Do not call any tool. Reply with ONE JSON object and nothing else.
 """
 
-_PROPOSE_CONTRACT = """Reply schema (contract "serene-hermes-wire/1"):
-{"contract": "serene-hermes-wire/1", "proposals": [ ... up to 16 ... ]}
-Each proposal is one of:
- {"kind":"observation","evidence_ids":[evd ids],"statement":str,"contexts":[tags]}
- {"kind":"pattern","ref":"P1","observation_ids":[>=2 obs ids],"counter_observation_ids":[],
-  "description":str,"contexts":[tags]}
- {"kind":"hypothesis","ref":"H1","pattern_refs":["P1" or pat id],"statement":str,
-  "supporting_evidence_ids":[],"counter_evidence_ids":[],"alternative_explanations":[],
-  "known_confounders":[],"falsification_criteria":[>=1],"contexts":[>=1 tags],
-  "supersedes": null or hyp id}
- {"kind":"experiment","hypothesis_ref":"H1" or hyp id,"category":CATEGORY,"description":str,
-  "reversible":bool,"max_duration_days":int,"burden":"LOW|MEDIUM|HIGH","comparison":str,
-  "outcome_measure":str}
- {"kind":"need_evidence","requested_fields":[tags],"rationale":str}
- {"kind":"abstain","reason":str}
-Tags are lower_snake_case. Propose at least two competing hypotheses when you
-propose any."""
-
-_PLAN_CONTRACT = """Reply schema (contract "serene-hermes-wire/1"):
-{"contract": "serene-hermes-wire/1", "candidates": [ ... up to 8 ... ]}
-Each candidate is the smallest missing observation that could tell the live
-hypotheses apart:
- {"candidate_id":"lower-id","requested_fields":[tags],"acquisition_mode":"ASK_PARENT",
-  "question":"one yes/no question","rationale":str,
-  "predictions":[{"hypothesis_id":hyp id,"expected":"YES|NO"}]}
- or {"candidate_id":..., "acquisition_mode":"BROWSE","subject":tag,
-  "allowed_domains":["example.org"],"requested_fields":[tags],"rationale":str,
-  "predictions":[...]}
-Do not rate value, cost or safety; Serene computes those."""
 _BROWSE_SOURCES = (
     "\nBROWSE SOURCES (the only pages a BROWSE candidate may read; its allowed_domains "
     "must be their host): "
 )
+
+
+def _wire_kinds(task: AgentTask) -> tuple[str, ...]:
+    """The task's proposal kinds this wire can carry (memory patches never come from it)."""
+    return tuple(k for k in task.proposal_kinds if k != "memory_patch")
+
+
+def repair_feedback(error: WireError) -> str:
+    """The one repair turn: the stable code plus schema-only issues, never model text."""
+    lines = [
+        "",
+        "",
+        f"Your previous reply was rejected by the validator (code {error.code}).",
+    ]
+    if error.issues:
+        lines.append("Problems (location: validation type and allowed values or bounds):")
+        lines += [f"- {issue}" for issue in error.issues]
+    elif error.code in {"NOT_JSON", "EMPTY"}:
+        lines.append("The reply must be the JSON object alone, with no text before or after it.")
+    lines.append(
+        "Reply again with ONE JSON object that follows the schema exactly. Fix every listed "
+        "problem; leave out any proposal you cannot make valid rather than guessing."
+    )
+    return "\n".join(lines)
+
+
+def _issue_key(issue: str) -> str:
+    """Telemetry form of an issue: location without list indices, then the type."""
+    location, _, rest = issue.partition(": ")
+    kind = rest.split(" ", 1)[0]
+    path = ".".join(
+        p for p in location.replace("[", ".").replace("]", "").split(".") if p and not p.isdigit()
+    )
+    return f"{path}:{kind}".replace("<", "").replace(">", "").replace(" ", "_")
 
 
 def render_context(task: AgentTask, ctx: InvestigationContext) -> str:
@@ -263,7 +275,7 @@ class HermesAgentRuntime:
         ctx = self._context(task)
         if ctx.child_id != task.child_id:
             return self._finish(task, diag, "FAILED", (), 0)
-        body = render_context(task, ctx) + "\n\n" + _PROPOSE_CONTRACT
+        body = render_context(task, ctx) + "\n\n" + propose_contract(_wire_kinds(task))
         outcome = self._call(task, "propose", body, WireProposals, diag)
         if isinstance(outcome, str):
             return self._finish(task, diag, outcome, (), diag.attempts)
@@ -288,7 +300,7 @@ class HermesAgentRuntime:
         )
         diag = RunDiagnostics()
         self.last_diagnostics = diag
-        body = render_context(task, context) + "\n\n" + _PLAN_CONTRACT
+        body = render_context(task, context) + "\n\n" + plan_contract()
         if self._browse_sources:
             body += _BROWSE_SOURCES + json.dumps(list(self._browse_sources))
         outcome = self._call(task, "plan_evidence", body, WirePlan, diag)
@@ -410,13 +422,11 @@ class HermesAgentRuntime:
                 return response, parse_wire(response.output_text, wire_model)
             except WireError as exc:
                 diag.wire_errors.append(f"WIRE_{exc.code.split(':', 1)[0]}")
+                diag.wire_issues.extend(_issue_key(i) for i in exc.issues)
                 if repairs >= self._max_repairs:
                     return "FAILED"
                 repairs += 1
-                feedback = (
-                    "\n\nYour previous reply was rejected by the validator with code "
-                    f"{exc.code}. Reply again with ONE JSON object that follows the schema exactly."
-                )
+                feedback = repair_feedback(exc)
 
     def _finish(
         self,
@@ -444,6 +454,7 @@ class HermesAgentRuntime:
                 "admitted": len(proposals),
                 "refused": len(diag.item_errors),
                 "reason_codes": tuple(diag.wire_errors + diag.item_errors + diag.transport_errors),
+                "validation_issues": tuple(dict.fromkeys(diag.wire_issues))[:8],
                 "input_tokens": diag.input_tokens,
                 "output_tokens": diag.output_tokens,
                 "cost_micro_usd": cost or 0,

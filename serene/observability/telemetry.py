@@ -77,6 +77,8 @@ ALLOWED_KEYS: Final = frozenset(
         "update_kind",
         "checks_passed",
         "verifier_version",
+        # schema location:type of rejected model replies, e.g. "experiment.category:enum"
+        "validation_issues",
     }
 )
 _TOKEN = re.compile(r"^[A-Za-z0-9_:\-.,/]{0,256}$")
