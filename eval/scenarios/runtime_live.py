@@ -107,6 +107,7 @@ class ParentSim:
     def __init__(self, scenario_id: str) -> None:
         self._facts = PARENT_FACTS[scenario_id]
         self.asked: list[str] = []
+        self.approvals_seen: list[str] = []
 
     def answer(self, question: str, fields: tuple[str, ...] = ()) -> str | None:
         self.asked.append(question)
@@ -115,6 +116,13 @@ class ParentSim:
             if all(k in text for k in keywords):
                 return answer
         return "UNSURE"
+
+    def decide_approval(self, prompt_text: str) -> str:
+        """Fixed before any run that reached this step was read: the simulated parent
+        declines every experiment. A simulator holds no authority to start an
+        intervention on a child, and these scenarios score the investigation."""
+        self.approvals_seen.append("REJECT")
+        return "REJECT"
 
 
 @dataclass
@@ -279,6 +287,13 @@ def run_serene_live(scenario_id: str, live: HermesTransport) -> LiveResult:
             else:
                 outcome = run.script.tap_last(BUTTON[reply]).outcome
                 notes.append(f"tap:{outcome}")
+            continue
+        if phase == "NEEDS_APPROVAL" and len(run.rig.outbox.sent) > answered:
+            _chat, prompt_text, buttons = run.rig.outbox.sent[-1]
+            answered = len(run.rig.outbox.sent)
+            decision = parent.decide_approval(prompt_text)
+            index = [label for label, _ in buttons].index(decision)
+            notes.append(f"approval->{decision}:{run.script.tap_last(index).outcome}")
             continue
         if phase == "ASKING_HUMAN":  # still waiting and nobody will answer
             run.rig.family.clock.advance(SILENCE)

@@ -20,7 +20,9 @@ guards, so a refused transition leaves the investigation where it was.
     EVALUATING         model may revise (supersede) or propose an
                        experiment; deterministic sufficiency decides  -> NEEDS_APPROVAL |
                                                                         NEEDS_EVIDENCE | COMPLETE
-    NEEDS_APPROVAL     parent decides through the approval lifecycle  -> EVALUATING
+    NEEDS_APPROVAL     the experiment lifecycle classifies each proposal (RED is
+                       blocked); the opening parent decides the rest on an
+                       authenticated prompt; expiry parks              -> EVALUATING
 
 Any phase parks honestly (PARKED_UNRESOLVED) on an exhausted budget, an
 unavailable runtime/planner, a missing parent response or no live hypothesis.
@@ -96,6 +98,22 @@ class QuestionAsker(Protocol):
     def ask(self, child_id: str, request_id: str) -> object: ...
 
 
+class ExperimentSteps(Protocol):
+    """Branch-B experiment lifecycle (serene.experiments.service). POLICY decides; no model."""
+
+    def classify(self, child_id: str, experiment_id: str) -> object: ...
+
+    def request_approval(self, child_id: str, experiment_id: str, *, parent_id: str) -> object: ...
+
+    def run_timers(self, child_id: str) -> object: ...
+
+
+class ApprovalPrompter(Protocol):
+    """Shows open approval requests to the bound parent (idempotent per request)."""
+
+    def prompt_pending_approvals(self, child_id: str) -> object: ...
+
+
 @dataclass(frozen=True, slots=True)
 class InvestigationBudget:
     max_model_runs: int = 6
@@ -138,6 +156,8 @@ class InvestigationService:
         telemetry: SafeTelemetry | None = None,
         budget: InvestigationBudget | None = None,
         new_entity_id: Callable[[str], str] = new_id,
+        experiments: ExperimentSteps | None = None,
+        approvals: ApprovalPrompter | None = None,
     ) -> None:
         if system_actor.kind is not ActorKind.SYSTEM:
             raise ValueError("the controller acts as a SYSTEM actor")
@@ -151,6 +171,8 @@ class InvestigationService:
         self._system = system_actor
         self._evidence = evidence
         self._asker = asker
+        self._experiments = experiments
+        self._approvals = approvals
         self._telemetry = telemetry or SafeTelemetry()
         self._budget = budget or InvestigationBudget()
         self._new_id = new_entity_id
@@ -382,9 +404,16 @@ class InvestigationService:
         )
         if isinstance(report, StepResult):
             return report
-        fresh = self._ledger.replay_events(child)
-        if report.admitted("experiment"):
+        proposed = [o.entity_id for o in report.admitted("experiment") if o.entity_id]
+        if proposed and self._experiments is None:
             return self._move(child, inv, _P.EVALUATING, _P.NEEDS_APPROVAL, "EXPERIMENT_PROPOSED")
+        if proposed and self._seek_approval(child, inv, proposed):
+            moved = self._move(child, inv, _P.EVALUATING, _P.NEEDS_APPROVAL, "EXPERIMENT_PROPOSED")
+            if self._approvals is not None:
+                self._approvals.prompt_pending_approvals(child)
+            return moved
+        # No proposal, or every proposal was blocked (RED / unfit) and needs no decision.
+        fresh = self._ledger.replay_events(child)
         ctx = self._context(fresh, child, inv)
         if not ctx.live_hypotheses():
             return self._park(child, inv, _P.EVALUATING, "NO_LIVE_HYPOTHESIS")
@@ -404,7 +433,36 @@ class InvestigationService:
             return self._park(child, inv, _P.EVALUATING, "EVIDENCE_BUDGET_EXHAUSTED")
         return self._move(child, inv, _P.EVALUATING, _P.NEEDS_EVIDENCE, "MORE_EVIDENCE_USEFUL")
 
+    def _seek_approval(self, child: str, inv: str, experiment_ids: list[str]) -> bool:
+        """Classify each proposal (POLICY) and ask the opening parent to decide the eligible
+        ones. True when at least one now awaits a parent's decision."""
+        assert self._experiments is not None
+        for experiment_id in experiment_ids:
+            self._experiments.classify(child, experiment_id)
+        state = self._ledger.replay_events(child)
+        opener = state.entities[inv].entity.opened_by
+        if opener.kind is ActorKind.PARENT:
+            for experiment_id in experiment_ids:
+                self._experiments.request_approval(child, experiment_id, parent_id=opener.actor_id)
+            state = self._ledger.replay_events(child)
+        statuses = [state.experiments[e].status for e in experiment_ids]
+        self._telemetry.emit(
+            "investigation.experiments",
+            {
+                "child_id": child,
+                "investigation_id": inv,
+                "count": len(experiment_ids),
+                "status": ",".join(sorted({s.value for s in statuses})),
+            },
+        )
+        return ExperimentStatus.AWAITING_APPROVAL in statuses
+
     def _needs_approval(self, child: str, inv: str, state: KernelState) -> StepResult:
+        if self._experiments is not None:
+            self._experiments.run_timers(child)  # approval expiry parks; never approves
+            state = self._ledger.replay_events(child)
+        if self._approvals is not None:
+            self._approvals.prompt_pending_approvals(child)  # idempotent re-delivery
         records = [r for r in state.experiments.values() if r.experiment.investigation_id == inv]
         if any(r.status is ExperimentStatus.PARKED_UNRESOLVED for r in records):
             return self._park(child, inv, _P.NEEDS_APPROVAL, "APPROVAL_TIMED_OUT")

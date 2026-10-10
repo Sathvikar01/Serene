@@ -128,7 +128,9 @@ def make_investigation_rig(
     telemetry = SafeTelemetry(sink, pseudonym_key=PSEUDONYM_KEY)
     family.ledger._telemetry = telemetry
     transport = transport if transport is not None else ScriptedHermesTransport()
-    actors = KernelActors(agent=family.agent, system=family.system, verifier=family.verifier)
+    actors = KernelActors(
+        agent=family.agent, system=family.system, verifier=family.verifier, policy=family.policy
+    )
     holder: dict[str, HermesAgentRuntime] = {}
 
     def runtime_factory(retriever: Any, kernel_actors: KernelActors) -> HermesAgentRuntime:
@@ -174,6 +176,7 @@ def make_investigation_rig(
         browse_allowlist=browse_allowlist,
         evidence=evidence(family, telemetry, transport) if callable(evidence) else evidence,
         asker=prompter,
+        approvals=prompter,
         actors=actors,
         budget=budget,
         new_entity_id=family.new_id,

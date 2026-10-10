@@ -15,10 +15,13 @@ from dataclasses import dataclass
 from serene.domain.base import new_id
 from serene.domain.values import ActorKind, ActorRef
 from serene.evidence.ingestion import ObservationIngestion
+from serene.experiments.lifecycle import LifecycleContext
+from serene.experiments.service import ExperimentLifecycleService
 from serene.investigation.boundary import KernelBoundary
 from serene.investigation.context import ContextRetriever
 from serene.investigation.minimum_data import EvidencePlanner, MinimumDataPolicy
 from serene.investigation.service import (
+    ApprovalPrompter,
     EvidenceActions,
     InvestigationBudget,
     InvestigationService,
@@ -42,6 +45,7 @@ class KernelActors:
     agent: ActorRef
     system: ActorRef
     verifier: ActorRef
+    policy: ActorRef | None = None  # None: the derived kernel POLICY identity
 
     @classmethod
     def derived(cls, namespace: str = "serene") -> KernelActors:
@@ -49,6 +53,7 @@ class KernelActors:
             agent=kernel_actor(ActorKind.AGENT, namespace),
             system=kernel_actor(ActorKind.SYSTEM, namespace),
             verifier=kernel_actor(ActorKind.VERIFIER, namespace),
+            policy=kernel_actor(ActorKind.POLICY, namespace),
         )
 
 
@@ -81,6 +86,7 @@ def build_stack(
     browse_allowlist: Sequence[str] = (),
     evidence: EvidenceActions | None = None,
     asker: QuestionAsker | None = None,
+    approvals: ApprovalPrompter | None = None,
     actors: KernelActors | None = None,
     budget: InvestigationBudget | None = None,
     new_entity_id: Callable[[str], str] = new_id,
@@ -123,6 +129,17 @@ def build_stack(
         telemetry=telemetry,
         budget=budget,
         new_entity_id=new_entity_id,
+        experiments=ExperimentLifecycleService(
+            ledger,
+            clock,
+            LifecycleContext(
+                actors.policy or kernel_actor(ActorKind.POLICY),
+                actors.system,
+                lambda: new_entity_id("src"),
+            ),
+            new_entity_id=new_entity_id,
+        ),
+        approvals=approvals,
     )
     return RuntimeStack(
         ledger=ledger,
