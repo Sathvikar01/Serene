@@ -229,6 +229,8 @@ class LiveResult:
     traces: list[tuple[str, dict[str, Any]]]
     notes: list[str]
     wall_ms: int
+    # The system's own ledger, when it has one (Serene). Baselines keep none.
+    ledger_events: list[Any] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------- Serene
@@ -285,6 +287,7 @@ def run_serene_live(scenario_id: str, live: HermesTransport) -> LiveResult:
             notes.append(f"stalled:{phase}:{last}")
             break
     trajectory = trajectory_from_ledger("serene", scenario_id, run)
+    family = run.rig.family
     return LiveResult(
         "serene",
         scenario_id,
@@ -293,6 +296,7 @@ def run_serene_live(scenario_id: str, live: HermesTransport) -> LiveResult:
         list(run.rig.sink.records),
         notes,
         int((time.monotonic() - started) * 1000),
+        list(family.ledger.get_events_for_child(family.child_id)),
     )
 
 

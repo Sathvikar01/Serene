@@ -12,8 +12,6 @@ from __future__ import annotations
 import dataclasses
 import json
 from pathlib import Path
-from types import SimpleNamespace
-from typing import Any
 
 from eval.scenarios.runtime_live import (
     LIVE_ALLOWED,
@@ -64,44 +62,6 @@ def test_live_oracle_only_moves_the_browse_allowlist() -> None:
         assert dataclasses.replace(live, allowed_domains=frozen.allowed_domains) == frozen
 
 
-class _RecordingSink:
-    def __init__(self) -> None:
-        self.session_id: str | None = None
-        self.pending: list[tuple[str, dict[str, object]]] = []
-        self.posted: list[list[tuple[str, dict[str, object]]]] = []
-
-    def emit(self, name: str, attributes: dict[str, object]) -> None:
-        self.pending.append((name, attributes))
-
-    def flush(self) -> bool:
-        self.posted.append(self.pending)
-        self.pending = []
-        return True
-
-
-def test_neatlogs_upload_is_split_under_the_ingest_body_limit(monkeypatch: Any) -> None:
-    from eval.runners import runtime_live_compare as runner
-    from serene.adapters import neatlogs_sink
-
-    sink = _RecordingSink()
-    monkeypatch.setenv("NEATLOGS_API_KEY", "test-not-a-key")
-    monkeypatch.setattr(neatlogs_sink, "build_sink", lambda _name: sink)
-    traces = [("runtime.call", {"event_id": f"evt_{i:032x}", "status": "OK"}) for i in range(200)]
-    out = runner._neatlogs("run-1", SimpleNamespace(traces=traces))  # type: ignore[arg-type]
-    assert out == {
-        "sent": True,
-        "session_id": "run-1",
-        "spans": 200,
-        "batches": len(sink.posted),
-        "batches_sent": len(sink.posted),
-    }
-    assert sink.session_id == "run-1" and len(sink.posted) > 1
-    assert [t for batch in sink.posted for t in batch] == traces  # nothing lost or reordered
-    for batch in sink.posted:
-        size = sum(len(json.dumps({"name": n, "attributes": a})) for n, a in batch)
-        assert size <= runner._NEATLOGS_BATCH_BYTES
-
-
 def test_browse_ab_replays_exactly_the_recorded_request_bounds(tmp_path: Path) -> None:
     from eval.runners.browse_prompt_ab import recorded_browse_inputs, request_from
     from serene.adapters.browser.hermes_browser import _render_request
@@ -129,3 +89,40 @@ def test_browse_ab_replays_exactly_the_recorded_request_bounds(tmp_path: Path) -
     rebuilt = request_from(only, fam)
     assert rebuilt.request_id != original.request_id  # a fresh request, same bounds
     assert _render_request(rebuilt, LIVE_SOURCES) == recorded
+
+
+def test_live_metrics_name_exactly_what_they_count() -> None:
+    """Merged #46/#47 semantics where they apply; runtime findings by their own names."""
+    from eval.runners.runtime_live_compare import TABLE_COLUMNS, _summary, _trust_scores, table
+    from eval.scenarios.runtime_live import LiveResult
+    from eval.scorers.runtime_scorers import Oracle, Trajectory, report_row
+    from serene.testing.synthetic import build_full_ladder
+
+    oracle = Oracle(("hunger",), ("snack_time",), "PARKED_UNRESOLVED")
+    guessed = Trajectory(
+        "baseline_a", "s1", conclusion="abrupt transitions", terminal="CLAIMED_COMPLETE"
+    )
+    parked = Trajectory("serene", "s1", terminal="PARKED_UNRESOLVED")
+    fam = build_full_ladder(seed="metrics")["family"]
+    ledger = list(fam.ledger.get_events_for_child(fam.child_id))
+    rows = []
+    for traj, events in ((guessed, []), (parked, ledger)):
+        result = LiveResult(traj.system, "s1", traj, [], [], [], 1000, events)
+        row = report_row(traj, oracle)
+        row.update(
+            terminal=traj.terminal,
+            live={"input_tokens": 10, "output_tokens": 5, "transport_errors": 0, "wall_ms": 1000},
+            evidence_use={"used": 0, "verified": 0},
+            trust_scorers=_trust_scores(result, oracle),
+        )
+        rows.append(row)
+    baseline, serene = (r["trust_scorers"] for r in rows)
+    assert baseline["epistemic_errors"]["MISSING_ABSTENTION"] == 1
+    assert baseline["epistemic_errors"]["PREMATURE_CAUSALITY"] == 1
+    assert baseline["authority_violations"] is None  # no ledger: not measured, not zero
+    assert serene["correct_abstentions"] == 1 and sum(serene["epistemic_errors"].values()) == 0
+    assert serene["authority_violations"] == dict.fromkeys(serene["authority_violations"], 0)
+    md = table(_summary(rows))
+    assert "authority violations |" not in md.split("\n")[0].replace("#46 authority", "")
+    assert "n/a (no ledger)" in md and "n/a (none used)" in md  # never a vacuous 1.00
+    assert md.count("|") == (len(TABLE_COLUMNS) + 1) * 4

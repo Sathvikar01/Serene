@@ -12,8 +12,9 @@ under eval/reports/local/live/<label>-<utc>/:
     traces/serene__<scenario>.jsonl    SafeTelemetry records (already redacted)
 
 When NEATLOGS_API_KEY is set the same redacted records are also sent to
-neatlogs through `serene.adapters.neatlogs_sink.build_sink`, in traces under
-~8 KiB that share one session id: the run id is the neatlogs session handle.
+neatlogs through the committed `serene.adapters.neatlogs_sink.NeatlogsSink`, which
+packs them into traces under the ingest body limit that share one session id: the
+run id is the neatlogs session handle, and the flush report is kept in scores.json.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ import urllib.request
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Final
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -44,15 +45,17 @@ from eval.scenarios.runtime_live import (  # noqa: E402
     live_oracle,
 )
 from eval.scenarios.runtime_scenarios import SCENARIOS  # noqa: E402
-from eval.scorers.runtime_scorers import SCORER_VERSION, report_row  # noqa: E402
+from eval.scorers.runtime_scorers import SCORER_VERSION, Oracle, report_row  # noqa: E402
 from serene.adapters.browser.hermes_browser import BROWSER_PROMPT_VERSION  # noqa: E402
 from serene.adapters.hermes import transport_from_env  # noqa: E402
 from serene.adapters.hermes.runtime import PROMPT_VERSION  # noqa: E402
-
-# neatlogs ingest answers HTTP 403 to request bodies over ~8 KiB (measured 2026-10-10:
-# 8150 bytes accepted, 8364 refused), so one run goes out as several traces that share
-# the run's session id. Records are counted before the sink's own envelope, hence margin.
-_NEATLOGS_BATCH_BYTES = 5_500
+from serene.policies.scorers import SCORER_VERSION as TRUST_SCORER_VERSION  # noqa: E402
+from serene.policies.scorers import (  # noqa: E402
+    EpistemicClaim,
+    EpistemicError,
+    score_authority,
+    score_epistemic,
+)
 
 
 def _git() -> dict[str, Any]:
@@ -79,29 +82,69 @@ def _health() -> Any:
 
 
 def _neatlogs(run_id: str, result: LiveResult) -> dict[str, Any]:
-    if not os.environ.get("NEATLOGS_API_KEY") or not result.traces:
-        return {"sent": False, "reason": "NEATLOGS_API_KEY unset" if result.traces else "no traces"}
-    from serene.adapters.neatlogs_sink import build_sink
+    """Send one run's redacted records as one neatlogs session (the run id)."""
+    if not result.traces:
+        return {"sent": False, "reason": "no traces"}
+    from serene.adapters.neatlogs_sink import NeatlogsSink, build_sink
 
-    sink = build_sink("serene-live-eval")
-    if hasattr(sink, "session_id"):  # HTTP sink: the run id is the neatlogs session handle
-        sink.session_id = run_id
-    flush = getattr(sink, "flush", None)
-    batches = sent = size = 0
+    sink = build_sink("serene-live-eval", session_id=run_id)
+    if not isinstance(sink, NeatlogsSink):
+        return {"sent": False, "reason": "NEATLOGS_API_KEY unset"}
     for name, attrs in result.traces:  # already redacted by SafeTelemetry
-        record = len(json.dumps({"name": name, "attributes": attrs}, default=str))
-        if callable(flush) and size and size + record > _NEATLOGS_BATCH_BYTES:
-            batches, sent, size = batches + 1, sent + bool(flush()), 0
         sink.emit(name, attrs)
-        size += record
-    if callable(flush) and size:
-        batches, sent = batches + 1, sent + bool(flush())
+    report = sink.flush()
     return {
-        "sent": sent == batches if callable(flush) else True,
-        "session_id": run_id,
-        "spans": len(result.traces),
-        "batches": batches,
-        "batches_sent": sent,
+        "sent": report.ok,
+        "session_id": report.session_id,
+        "spans": report.spans,
+        "batches": report.batches,
+        "batches_sent": report.batches_sent,
+        "dropped_spans": report.dropped_spans,
+        "errors": list(report.errors),
+    }
+
+
+def _trust_scores(result: LiveResult, oracle: Oracle) -> dict[str, Any]:
+    """The merged deterministic trust scorers (#46, #47), where they apply.
+
+    Epistemic (#47) scores every system's final claim: a single asserted cause is a
+    causal claim, parking is an abstention, and the oracle's expected terminal is the
+    gold abstention label; Serene's own ledger is also replayed for invalid promotions.
+    Authority (#46) needs a ledger trajectory, so it is scored for Serene only and is
+    None (not measured) for the baselines, which keep no ledger.
+    """
+    t = result.trajectory
+    claim = EpistemicClaim(
+        subject_id=None,
+        causal=t.conclusion is not None,
+        abstained=t.terminal not in {"COMPLETE", "CLAIMED_COMPLETE"},
+        expected_abstain=oracle.expected_terminal == "PARKED_UNRESOLVED",
+    )
+    epistemic = score_epistemic(result.ledger_events, [claim])
+    authority = score_authority(result.ledger_events) if result.ledger_events else None
+    return {
+        "scorer_version": TRUST_SCORER_VERSION,
+        "epistemic_errors": {e.value: epistemic.counts[e.value] for e in EpistemicError},
+        "correct_abstentions": epistemic.correct_abstentions,
+        "unnecessary_abstentions": epistemic.unnecessary_abstentions,
+        "authority_violations": None if authority is None else authority.counts,
+        "ledger_events": len(result.ledger_events),
+    }
+
+
+def _findings(row: dict[str, Any]) -> dict[str, int]:
+    """Exact runtime-scorer findings, by the name each scorer gives them."""
+    scores = row["scores"]
+    critical = [c.split(":", 1)[0] for s in scores.values() for c in s["critical"]]
+    notes = [n.split(":", 1) for s in scores.values() for n in s["notes"]]
+    return {
+        "off_allowlist_evidence_used": critical.count("USED_OFF_ALLOWLIST_SOURCE"),
+        "rejected_evidence_used": critical.count("USED_REJECTED_EVIDENCE"),
+        "false_completions": critical.count("FALSE_COMPLETION"),
+        "wrong_cause_concluded": sum(1 for n in notes if n[0] == "CONCLUDED_WRONG_CAUSE"),
+        "unnecessary_questions": sum(
+            int(n[1]) for n in notes if n[0] == "UNNECESSARY_QUESTIONS" and len(n) == 2
+        ),
     }
 
 
@@ -112,23 +155,91 @@ def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for system, items in by_system.items():
         dims = sorted({d for r in items for d in r["scores"]})
+        findings = [_findings(r) for r in items]
+        trust = [r["trust_scorers"] for r in items]
+        authority = [t["authority_violations"] for t in trust]
         out[system] = {
             "runs": len(items),
+            "all_runtime_scorers_passed": sum(
+                1 for r in items if all(s["passed"] for s in r["scores"].values())
+            ),
             "mean": {
                 d: round(sum(r["scores"][d]["value"] for r in items) / len(items), 4) for d in dims
             },
             "passed": {d: sum(1 for r in items if r["scores"][d]["passed"]) for d in dims},
-            "critical_findings": sum(
-                len(s["critical"]) for r in items for s in r["scores"].values()
+            "runtime_findings": {k: sum(f[k] for f in findings) for k in findings[0]},
+            "evidence_used": sum(r["evidence_use"]["used"] for r in items),
+            "evidence_used_verified": sum(r["evidence_use"]["verified"] for r in items),
+            "trust_epistemic_errors": {
+                k: sum(t["epistemic_errors"][k] for t in trust)
+                for k in trust[0]["epistemic_errors"]
+            },
+            "trust_unnecessary_abstentions": sum(t["unnecessary_abstentions"] for t in trust),
+            "trust_authority_violations": (
+                None
+                if any(a is None for a in authority)
+                else {k: sum(a[k] for a in authority) for k in authority[0]}
             ),
             "terminal": dict(Counter(r["terminal"] for r in items)),
             "model_calls": sum(r["budget"]["model_calls"] for r in items),
+            "browse_actions": sum(r["budget"]["browse_actions"] for r in items),
             "input_tokens": sum(r["live"]["input_tokens"] for r in items),
             "output_tokens": sum(r["live"]["output_tokens"] for r in items),
             "transport_errors": sum(r["live"]["transport_errors"] for r in items),
             "wall_ms": sum(r["live"]["wall_ms"] for r in items),
         }
     return out
+
+
+TABLE_COLUMNS: Final = (
+    "system",
+    "runs",
+    "all 3 runtime scorers passed",
+    "used evidence verified",
+    "off-allowlist evidence used",
+    "rejected evidence used",
+    "false completions",
+    "wrong cause concluded",
+    "#47 missing abstention",
+    "#47 premature causality",
+    "#46 authority violations",
+    "unnecessary questions",
+    "investigation score",
+    "recovery score",
+    "model calls",
+    "tokens",
+    "wall s",
+)
+
+
+def table(summary: dict[str, Any]) -> str:
+    """Markdown summary whose column names say exactly what each number counts."""
+    lines = ["| " + " | ".join(TABLE_COLUMNS) + " |", "|" + "---|" * len(TABLE_COLUMNS)]
+    for system, s in summary.items():
+        f, e = s["runtime_findings"], s["trust_epistemic_errors"]
+        authority = s["trust_authority_violations"]
+        used = s["evidence_used"]
+        cells = [
+            system,
+            s["runs"],
+            f"{s['all_runtime_scorers_passed']}/{s['runs']}",
+            f"{s['evidence_used_verified']}/{used}" if used else "n/a (none used)",
+            f["off_allowlist_evidence_used"],
+            f["rejected_evidence_used"],
+            f["false_completions"],
+            f["wrong_cause_concluded"],
+            e["MISSING_ABSTENTION"],
+            e["PREMATURE_CAUSALITY"],
+            "n/a (no ledger)" if authority is None else sum(authority.values()),
+            f["unnecessary_questions"],
+            f"{s['mean']['investigation_success']:.2f}",
+            f"{s['mean']['recovery_state']:.2f}",
+            s["model_calls"],
+            f"{s['input_tokens'] + s['output_tokens']:,}",
+            round(s["wall_ms"] / 1000),
+        ]
+        lines.append("| " + " | ".join(str(c) for c in cells) + " |")
+    return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -166,6 +277,13 @@ def main(argv: list[str] | None = None) -> int:
                 "output_tokens": sum(r["usage"]["output_tokens"] or 0 for r in ok),
                 "wall_ms": result.wall_ms,
             }
+            row["evidence_use"] = {
+                "used": sum(1 for e in result.trajectory.evidence if e.used),
+                "verified": sum(
+                    1 for e in result.trajectory.evidence if e.used and e.verification == "VERIFIED"
+                ),
+            }
+            row["trust_scorers"] = _trust_scores(result, live_oracle(sid))
             row["neatlogs"] = _neatlogs(run_id, result)
             rows.append(row)
             stem = f"{system}__{sid}"
@@ -194,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "versions": {
             "scorer": SCORER_VERSION,
+            "trust_scorer": TRUST_SCORER_VERSION,
             "runtime_prompt": PROMPT_VERSION,
             "browser_prompt": BROWSER_PROMPT_VERSION,
             "baseline_prompt": BASELINE_PROMPT_VERSION,
@@ -206,8 +325,10 @@ def main(argv: list[str] | None = None) -> int:
         "sampling": "Hermes server defaults (not pinned by the client)",
     }
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str), "utf-8")
-    report = {"rows": rows, "summary": _summary(rows)}
+    report: dict[str, Any] = {"rows": rows, "summary": _summary(rows)}
     (out / "scores.json").write_text(json.dumps(report, indent=2, sort_keys=True), "utf-8")
+    (out / "table.md").write_text(table(report["summary"]) + "\n", "utf-8")
+    print(table(report["summary"]))
     print(f"wrote {out.relative_to(ROOT)}")
     return 0
 

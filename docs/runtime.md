@@ -103,7 +103,7 @@ Without a fetcher the verifier fails closed (`REFETCH_UNAVAILABLE`).
 | Hermes transport TRANSIENT | 1 bounded retry, then FAILED | `runtime.call` / `browser.call` `retryable` |
 | Hermes AUTH / PROTOCOL / REFUSED | no retry; run fails closed | `runtime.run` `reason_codes` |
 | Hermes provider failure (HTTP 200, `completed`, zero usage, one warning line) | classified by the transport as AUTH / TRANSIENT / PROTOCOL, never read as model output | `runtime.call error_type`, `TRANSPORT_AUTH` |
-| Malformed model output | one repair with a safe error code (reasoning); browse: attempt counted as MALFORMED | `WIRE_*` codes |
+| Malformed model output | one repair naming each failing field by schema location, validation type and schema bound, never model text (reasoning); browse: attempt counted as MALFORMED | `WIRE_*` codes, `runtime.run validation_issues` |
 | Model executed a tool while reasoning | whole run discarded | `TOOLS_NOT_PERMITTED` |
 | Browse TRANSIENT/MALFORMED | ledger-counted retry (default 3 attempts), next scheduler tick | `EVIDENCE_ACQUISITION_FAILED retryable=true` |
 | Browse BLOCKED/NOT_FOUND/BUDGET_EXHAUSTED | request exhausted; back to NEEDS_EVIDENCE | `retryable=false` |
@@ -151,7 +151,14 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
   proves no oracle text reaches any prompt.
 * Baselines: `eval/baselines/runtime_baselines.py` (A plain Hermes, B + memory/RAG),
   same transport/browser/parent and `MatchedBudget.from_serene()`.
-* `uv run inspect eval eval/tasks/runtime_investigation.py --model mockllm/model`
+* `uv run inspect eval eval/tasks/runtime_investigation.py --model mockllm/model`. CI runs
+  it with the kernel and trust tasks and `scripts/inspect_gate.py` fails the job unless
+  every sample of all three is CORRECT (`inspect eval` alone exits 0 on INCORRECT).
+* The model-facing reply schema is rendered from the wire models
+  (`propose_contract`, `plan_contract` in `serene/adapters/hermes/wire.py`): exact enum
+  values, list/length bounds, and only the proposal kinds the task admits. The schema
+  itself is unchanged and strict; `tests/fixtures/live_rejected_proposals.json` keeps
+  the live replies it rejected as regressions.
 * Live runs: `eval/scenarios/runtime_live.py` + `eval/runners/runtime_live_compare.py --label <x>`
   run the same six scenarios with every model call sent to the Hermes API server (no
   scripted replies) for Serene and both baselines: one simulated parent (`ParentSim`,
@@ -161,9 +168,14 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
   `eval-live-pages-v1`). The planner and every browser are told that URL as
   `pinned_sources`; a browse touching any other URL is BLOCKED (`URL_NOT_PINNED`)
   and the verifier re-fetches nothing else. Each run keeps the raw exchanges, the redacted trace and the
-  scorer rows under `eval/reports/local/live/` (and sends the trace to neatlogs when
-  `NEATLOGS_API_KEY` is set, in batches under its ~8 KiB body limit; the run id is
-  the neatlogs session id). `eval/runners/browse_prompt_ab.py` replays recorded
+  scorer rows under `eval/reports/local/live/`, and sends the trace to neatlogs when
+  `NEATLOGS_API_KEY` is set through the committed `NeatlogsSink` (batches under the
+  ~8 KiB ingest body limit, one session id per run, an explicit flush report per run
+  in `scores.json`). Metric columns name exactly what they count: runtime-scorer
+  findings by their own names, `#47` epistemic errors (merged trust scorers) on every
+  system's final claim, `#46` authority violations on Serene's ledger only (`n/a`
+  for the ledger-less baselines), and verified/used evidence as a count (`n/a` when
+  nothing was used, never a vacuous 1.00). `eval/runners/browse_prompt_ab.py` replays recorded
   browse requests live under two prompts. Measured results:
   [live-eval-2026-10-10.md](live-eval-2026-10-10.md).
 * `uv run python eval/runners/runtime_compare.py` writes
