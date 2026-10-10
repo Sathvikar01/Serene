@@ -21,7 +21,12 @@ from serene.domain.entities import (
     TERMINAL_INVESTIGATION_STATUSES,
     InvestigationPhase,
 )
-from serene.domain.events import AcquisitionMode, InvestigationPhaseChanged
+from serene.domain.events import (
+    AcquisitionMode,
+    HypothesisPrediction,
+    InformationValue,
+    InvestigationPhaseChanged,
+)
 from serene.domain.values import VerificationStatus
 from serene.policies.decision import PolicyDecision
 from serene.projections.state import (
@@ -31,7 +36,7 @@ from serene.projections.state import (
     LifecycleStatus,
 )
 
-POLICY_VERSION: Final = "investigation-phase/1"
+POLICY_VERSION: Final = "investigation-phase/2"
 MIN_COMPETING_HYPOTHESES: Final = 2
 
 _P = InvestigationPhase
@@ -52,6 +57,10 @@ PHASE_TRANSITIONS: Final[dict[InvestigationPhase, frozenset[InvestigationPhase]]
     _P.COMPLETE: frozenset(),
     _P.PARKED_UNRESOLVED: frozenset(),
 }
+
+# The only phases in which a (model-proposed) hypothesis may enter the ledger:
+# forming the competing set, and revising it while evaluating evidence.
+HYPOTHESIS_PHASES: Final = frozenset({_P.FORMING_HYPOTHESES, _P.EVALUATING})
 
 _AWAITING_EXPERIMENT = frozenset(
     {
@@ -174,3 +183,30 @@ def investigation_accepts_work(investigation_id: str, state: KernelState) -> lis
     if state.investigations.get(investigation_id) in TERMINAL_INVESTIGATION_STATUSES:
         reasons.append("INVESTIGATION_CLOSED")
     return reasons
+
+
+def hypothesis_admission(investigation_id: str, state: KernelState) -> list[str]:
+    """Reasons a new hypothesis may not attach to an investigation right now.
+
+    Enforced at ledger admission, so a writer that bypasses `InvestigationService`
+    still cannot add a hypothesis while the investigation is understanding the
+    question, gathering evidence, verifying it, awaiting approval, or finished.
+    """
+    reasons = investigation_accepts_work(investigation_id, state)
+    phase = state.investigation_phases.get(investigation_id)
+    terminal = phase in TERMINAL_INVESTIGATION_PHASES  # already reported above
+    if phase is not None and not terminal and phase not in HYPOTHESIS_PHASES:
+        reasons.append(f"WRONG_PHASE:{phase.value}")
+    return reasons
+
+
+def information_value_of(
+    predictions: tuple[HypothesisPrediction, ...], live: frozenset[str]
+) -> InformationValue:
+    """Ordinal value of a request, from what the live hypotheses predict (no model claim)."""
+    expected = {p.expected for p in predictions if p.hypothesis_id in live}
+    if len(expected) >= 2:
+        return InformationValue.HIGH
+    if expected:
+        return InformationValue.MEDIUM
+    return InformationValue.LOW

@@ -9,6 +9,8 @@ check was skipped.
 
 from __future__ import annotations
 
+import ipaddress
+import re
 from typing import Final
 from urllib.parse import urlsplit
 
@@ -33,19 +35,40 @@ EXTERNAL_KINDS: Final = frozenset({EvidenceKind.DOCUMENT, EvidenceKind.BROWSER_C
 EXTERNAL_SOURCES: Final = frozenset({SourceKind.BROWSER, SourceKind.EXTERNAL_DOCUMENT})
 
 
+# One DNS label: 1-63 of [a-z0-9-], no leading/trailing hyphen.
+_LABEL: Final = re.compile(r"^(?!-)[a-z0-9-]{1,63}(?<!-)$")
+
+
+def _dns_name(host: str) -> str | None:
+    """`host` as a lower-cased DNS name, or None for IP literals and malformed names."""
+    name = host.lower().removesuffix(".")
+    if not name or len(name) > 253 or not all(_LABEL.match(label) for label in name.split(".")):
+        return None
+    try:
+        ipaddress.ip_address(name)
+    except ValueError:
+        return name
+    return None  # allowlists name domains; an IP literal never matches one
+
+
 def host_of(uri: str | None) -> str | None:
-    """Lower-cased host of an https URI; None for anything else (fails closed)."""
+    """Lower-cased host of an https URI; None for anything else (fails closed).
+
+    Never raises: a malformed port, host or authority is a deterministic refusal.
+    """
     if uri is None:
         return None
     try:
         parts = urlsplit(uri)
+        port = parts.port  # raises ValueError on a textual or out-of-range port
+        host = parts.hostname
     except ValueError:
         return None
-    if parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
+    if parts.scheme != "https" or not host or parts.username is not None:
         return None
-    if parts.port not in (None, 443):
+    if parts.password is not None or "@" in parts.netloc or port not in (None, 443):
         return None
-    return parts.hostname.lower().rstrip(".")
+    return _dns_name(host)
 
 
 def domain_allowed(host: str | None, allowed: tuple[str, ...]) -> bool:

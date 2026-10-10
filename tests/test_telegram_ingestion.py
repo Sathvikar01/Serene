@@ -348,32 +348,32 @@ def test_changed_intervention_cannot_reuse_an_old_prompt(h: Harness) -> None:
 # ---------------------------------------------------------------- micro-questions
 def _open_question(h: Harness) -> str:
     from serene.domain.entities import InvestigationPhase as P
-    from serene.domain.events import EvidenceRequested, InvestigationPhaseChanged
+    from serene.domain.events import (
+        EvidenceRequested,
+        HypothesisPrediction,
+        InvestigationPhaseChanged,
+        PredictedAnswer,
+    )
 
     fam = h.fam
     o1 = fam.observe("tearful pickup", day=0)
     o2 = fam.observe("tearful pickup again", day=1)
     pattern = fam.pattern((o1, o2), "pickups are tearful")
     inv = fam.open_investigation("why are pickups hard?")
-    fam.hypothesis(inv, (pattern,), "abrupt transitions")
-    fam.hypothesis(inv, (pattern,), "hunger after daycare")
-    for frm, to in [
-        (P.UNDERSTANDING, P.RETRIEVING_CONTEXT),
-        (P.RETRIEVING_CONTEXT, P.FORMING_HYPOTHESES),
-        (P.FORMING_HYPOTHESES, P.NEEDS_EVIDENCE),
-    ]:
-        fam.append(
-            fam.draft(
-                EventType.INVESTIGATION_PHASE_CHANGED,
-                fam.system,
-                InvestigationPhaseChanged(
-                    investigation_id=inv.investigation_id,
-                    from_phase=frm,
-                    to_phase=to,
-                    reason_codes=("TEST",),
-                ),
-            )
+    transitions = fam.hypothesis(inv, (pattern,), "abrupt transitions")
+    hunger = fam.hypothesis(inv, (pattern,), "hunger after daycare")
+    fam.append(
+        fam.draft(
+            EventType.INVESTIGATION_PHASE_CHANGED,
+            fam.system,
+            InvestigationPhaseChanged(
+                investigation_id=inv.investigation_id,
+                from_phase=P.FORMING_HYPOTHESES,
+                to_phase=P.NEEDS_EVIDENCE,
+                reason_codes=("TEST",),
+            ),
         )
+    )
     request_id = fam.new_id("erq")
     fam.append(
         fam.draft(
@@ -387,6 +387,14 @@ def _open_question(h: Harness) -> str:
                 rationale="discriminates hunger from transitions",
                 acquisition_mode=AcquisitionMode.ASK_PARENT,
                 question="Did he eat a snack before pickup today?",
+                predictions=(
+                    HypothesisPrediction(
+                        hypothesis_id=hunger.hypothesis_id, expected=PredictedAnswer.NO
+                    ),
+                    HypothesisPrediction(
+                        hypothesis_id=transitions.hypothesis_id, expected=PredictedAnswer.YES
+                    ),
+                ),
             ),
         )
     )

@@ -475,7 +475,9 @@ EVENT_TAXONOMY: Final[dict[EventType, EventSpec]] = {
         ObservationStructured, {_A.AGENT, _A.SYSTEM}, frozenset({_V.UNVERIFIED})
     ),
     EventType.OBSERVATION_STRUCTURING_FAILED: _spec(ObservationStructuringFailed, {_A.SYSTEM}, _NA),
-    EventType.EVIDENCE_REQUESTED: _spec(EvidenceRequested, {_A.AGENT, _A.SYSTEM, _A.POLICY}, _NA),
+    # LLM proposes, code decides: a model's suggestion reaches the ledger only as the
+    # request MinimumDataPolicy selected, recorded by the kernel (SYSTEM) or a policy.
+    EventType.EVIDENCE_REQUESTED: _spec(EvidenceRequested, {_A.SYSTEM, _A.POLICY}, _NA),
     EventType.EVIDENCE_ACQUIRED: _spec(
         EvidenceAcquired, {_A.SYSTEM, _A.PARENT, _A.CAREGIVER}, frozenset({_V.UNVERIFIED})
     ),

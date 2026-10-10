@@ -14,8 +14,11 @@ from typing import Final
 from serene.domain.canonical import sha256_hex
 from serene.domain.entities import (
     TERMINAL_INVESTIGATION_STATUSES,
+    Burden,
     Evidence,
     EvidenceKind,
+    Intervention,
+    InterventionCategory,
     InvestigationPhase,
     InvestigationStatus,
     LearningStatus,
@@ -46,6 +49,7 @@ from serene.domain.events import (
     HypothesisProposed,
     HypothesisRefuted,
     HypothesisSuperseded,
+    InformationValue,
     InvestigationOpened,
     InvestigationPhaseChanged,
     InvestigationStatusChanged,
@@ -63,6 +67,7 @@ from serene.domain.events import (
     OutcomeReported,
     PatternProposed,
     PromotionDecisionRecord,
+    SafetyClass,
     TrialRecorded,
 )
 from serene.domain.values import AUTHENTICATED_CHANNELS, EpistemicLevel, VerificationStatus
@@ -152,26 +157,73 @@ def _check_acquired_for_request(ev: Evidence, request_id: str, state: KernelStat
     return reasons
 
 
+_VALUE_RANK: Final = {InformationValue.HIGH: 0, InformationValue.MEDIUM: 1, InformationValue.LOW: 2}
+
+
 def _check_evidence_request(p: EvidenceRequested, state: KernelState) -> list[str]:
-    reasons = investigation.investigation_accepts_work(p.investigation_id, state)
+    """The recorded request is code's decision, so admission re-derives what it can.
+
+    Only SYSTEM/POLICY may record one (taxonomy). Independently of who wrote it, the
+    request must be well-formed for its mode, ask nothing already asked, carry an
+    information value its own predictions justify (never LOW, never inflated), and an
+    ASK_PARENT question must pass the same RED screen the selection policy applies.
+    """
+    inv = p.investigation_id
+    reasons = investigation.investigation_accepts_work(inv, state)
     if p.request_id in state.evidence_requests:
         reasons.append("DUPLICATE_EVIDENCE_REQUEST")
-    phase = state.investigation_phases.get(p.investigation_id)
+    phase = state.investigation_phases.get(inv)
     if phase is not None and phase is not InvestigationPhase.NEEDS_EVIDENCE:
         reasons.append(f"WRONG_PHASE:{phase.value}")
+    if any(record.open for record in investigation.requests_of(inv, state)):
+        reasons.append("OPEN_REQUEST_OUTSTANDING")
+    browse_bounds = bool(p.allowed_domains) or p.subject is not None
     if p.acquisition_mode is None:
         reasons.append("ACQUISITION_MODE_REQUIRED")
-    elif p.acquisition_mode is AcquisitionMode.ASK_PARENT and p.question is None:
-        reasons.append("QUESTION_REQUIRED")
-    elif p.acquisition_mode is AcquisitionMode.BROWSE and (
-        not p.allowed_domains or p.subject is None
-    ):
-        reasons.append("BROWSE_BOUNDS_REQUIRED")
-    active = set(investigation.active_hypotheses(p.investigation_id, state))
-    for prediction in p.predictions:
-        if prediction.hypothesis_id not in active:
-            reasons.append(f"PREDICTION_FOR_INACTIVE_HYPOTHESIS:{prediction.hypothesis_id}")
+    elif p.acquisition_mode is AcquisitionMode.ASK_PARENT:
+        if p.question is None:
+            reasons.append("QUESTION_REQUIRED")
+        elif _question_is_red(p.question):
+            reasons.append("UNSAFE_QUESTION")
+        if browse_bounds or p.max_age_days is not None:
+            reasons.append("QUESTION_WITH_BROWSE_BOUNDS")
+    elif p.acquisition_mode is AcquisitionMode.BROWSE:
+        if not p.allowed_domains or p.subject is None:
+            reasons.append("BROWSE_BOUNDS_REQUIRED")
+        if p.question is not None:
+            reasons.append("BROWSE_WITH_QUESTION")
+    asked = {f for r in investigation.requests_of(inv, state) for f in r.request.requested_fields}
+    if set(p.requested_fields) <= asked:
+        reasons.append("REDUNDANT_FIELDS")
+    active = set(investigation.active_hypotheses(inv, state))
+    predicted = [prediction.hypothesis_id for prediction in p.predictions]
+    if len(predicted) != len(set(predicted)):
+        reasons.append("DUPLICATE_PREDICTION")
+    for hypothesis_id in predicted:
+        if hypothesis_id not in active:
+            reasons.append(f"PREDICTION_FOR_INACTIVE_HYPOTHESIS:{hypothesis_id}")
+    # The selection policy scores over *live* hypotheses (a subset of active ones), so
+    # its value can be at most the value recomputed here: anything higher is inflated.
+    justified = investigation.information_value_of(p.predictions, frozenset(active))
+    if justified is InformationValue.LOW:
+        reasons.append("LOW_VALUE_REQUEST")
+    elif _VALUE_RANK[p.information_value] < _VALUE_RANK[justified]:
+        reasons.append(f"INFORMATION_VALUE_INFLATED:{justified.value}")
     return reasons
+
+
+def _question_is_red(question: str) -> bool:
+    """The RED screen MinimumDataPolicy applies: a question must not smuggle an intervention."""
+    screened = safety.classify_intervention(
+        Intervention(
+            category=InterventionCategory.COMMUNICATION,
+            description=question,
+            reversible=True,
+            max_duration_days=1,
+            burden=Burden.LOW,
+        )
+    )
+    return screened.safety_class is SafetyClass.RED
 
 
 def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -> list[str]:
@@ -241,14 +293,7 @@ def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -
             return _reasons(promotion.check_introduction(entity, state))
         case HypothesisProposed(hypothesis=hypothesis):
             reasons = _reasons(promotion.check_introduction(hypothesis, state))
-            reasons += [
-                r
-                for r in investigation.investigation_accepts_work(
-                    hypothesis.investigation_id, state
-                )
-                if r.startswith("INVESTIGATION_PHASE_TERMINAL")
-            ]
-            return reasons
+            return reasons + investigation.hypothesis_admission(hypothesis.investigation_id, state)
         case HypothesisSuperseded(hypothesis_id=old, superseded_by=new):
             reasons = []
             for hyp in (old, new):
