@@ -177,7 +177,8 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
   for the ledger-less baselines), and verified/used evidence as a count (`n/a` when
   nothing was used, never a vacuous 1.00). `eval/runners/browse_prompt_ab.py` replays recorded
   browse requests live under two prompts. Measured results:
-  [live-eval-2026-10-10.md](live-eval-2026-10-10.md).
+  [live-eval-2026-10-10.md](live-eval-2026-10-10.md),
+  [live-eval-2026-10-11.md](live-eval-2026-10-11.md).
 * `uv run python eval/runners/runtime_compare.py` writes
   `eval/reports/local/runtime_compare.json`. Baseline rows are `UNAVAILABLE` until
   a live Hermes API server is configured: scripted baseline replies would be an
