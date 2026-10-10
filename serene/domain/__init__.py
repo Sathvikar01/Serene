@@ -1,9 +1,98 @@
-"""Morrow Domain Kernel: canonical schemas and authority semantics.
+"""Serene Domain Kernel: canonical schemas and authority semantics.
 
-The domain kernel owns meaning and authority. The LLM proposes; code validates.
-No authority-bearing structure may come from unstructured LLM output.
-
-TODO(#1): canonical Pydantic v2 schemas for Observation, Evidence, Pattern,
-Hypothesis, Investigation, Experiment, Trial, Outcome, Learning, MemoryPatch,
-with strict validation and schema versioning.
+The kernel owns meaning and authority; it depends on Pydantic only and must
+never import an agent runtime (Hermes) or any adapter. The model proposes;
+code validates; the ledger records.
 """
+
+from serene.domain.base import SCHEMA_VERSION, KernelModel, new_id
+from serene.domain.entities import (
+    Burden,
+    DomainEntity,
+    Evidence,
+    EvidenceKind,
+    Experiment,
+    Hypothesis,
+    Intervention,
+    InterventionCategory,
+    Investigation,
+    InvestigationStatus,
+    Learning,
+    LearningStatus,
+    MemoryOperation,
+    MemoryPatch,
+    Observation,
+    Outcome,
+    OutcomeResult,
+    Pattern,
+    ReviewMetadata,
+    Trial,
+    TrialArm,
+    ValidityWindow,
+)
+from serene.domain.events import (
+    EVENT_TAXONOMY,
+    GENESIS_HASH,
+    HASH_VERSION,
+    DomainEvent,
+    EventDraft,
+    EventType,
+    SafetyClass,
+)
+from serene.domain.values import (
+    ActorKind,
+    ActorRef,
+    DerivationMethod,
+    EpistemicLevel,
+    ModelRef,
+    Provenance,
+    Scope,
+    SourceKind,
+    SourceRef,
+    VerificationStatus,
+)
+
+__all__ = [
+    "EVENT_TAXONOMY",
+    "GENESIS_HASH",
+    "HASH_VERSION",
+    "SCHEMA_VERSION",
+    "ActorKind",
+    "ActorRef",
+    "Burden",
+    "DerivationMethod",
+    "DomainEntity",
+    "DomainEvent",
+    "EpistemicLevel",
+    "EventDraft",
+    "EventType",
+    "Evidence",
+    "EvidenceKind",
+    "Experiment",
+    "Hypothesis",
+    "Intervention",
+    "InterventionCategory",
+    "Investigation",
+    "InvestigationStatus",
+    "KernelModel",
+    "Learning",
+    "LearningStatus",
+    "MemoryOperation",
+    "MemoryPatch",
+    "ModelRef",
+    "Observation",
+    "Outcome",
+    "OutcomeResult",
+    "Pattern",
+    "Provenance",
+    "ReviewMetadata",
+    "SafetyClass",
+    "Scope",
+    "SourceKind",
+    "SourceRef",
+    "Trial",
+    "TrialArm",
+    "ValidityWindow",
+    "VerificationStatus",
+    "new_id",
+]
