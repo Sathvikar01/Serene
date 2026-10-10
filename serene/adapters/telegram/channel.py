@@ -58,6 +58,10 @@ from serene.ports.clock import Clock
 SECRET_HEADER: Final = "x-telegram-bot-api-secret-token"  # noqa: S105 - header name
 MAX_BODY_BYTES: Final = 64_000
 _CALLBACK = re.compile(r"^(apr|mq):([0-9a-f]{16}):([ARYNU])$")
+# Kernel refusals that a later tap on the same prompt can legitimately overcome
+# (e.g. an AMBER grant tapped inside the deliberation window). The prompt token
+# survives these; every other refusal burns it.
+RETRYABLE_REFUSALS: Final = frozenset({"AMBER_DELIBERATION_TOO_SHORT"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,7 +209,8 @@ class TelegramChannel:
                 )
             )
         except AdmissionRejected as exc:
-            self._prompts.consume(prompt.token)  # a refused decision is not replayable
+            if not set(exc.reason_codes) <= RETRYABLE_REFUSALS:
+                self._prompts.consume(prompt.token)  # a refused decision is not replayable
             return _refusal(exc)
         self._prompts.consume(prompt.token)
         return ChannelResult(200, event_type.value, (event.event_id,))

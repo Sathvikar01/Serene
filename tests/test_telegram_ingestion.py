@@ -483,3 +483,43 @@ def test_bindings_reject_non_human_principals(h: Harness) -> None:
             child_id=h.fam.child_id,
             actor=ActorRef(kind=ActorKind.AGENT, actor_id=h.fam.new_id("act")),
         )
+
+
+def test_each_callback_mints_a_unique_stable_receipt_ref(h: Harness) -> None:
+    """Receipt replay keys (channel, message_ref) must be unique per tap and stable per tap."""
+    _, apr = _pending_approval(h)
+    (prompt,) = h.prompter.prompt_pending_approvals(h.fam.child_id)
+    data = h.outbox.sent[0][2][0][1]
+    result = h.tap(data, message_id=prompt.message_id)
+    assert result.outcome == "APPROVAL_GRANTED"
+    (granted,) = [e for e in h.events() if e.event_id in result.event_ids]
+    ref = granted.payload["receipt"]["message_ref"]
+    assert ref == f"tg-callback:9{h._update_id}"  # the Telegram callback_query id, verbatim
+    assert str(PARENT_TG) not in ref  # no Telegram user/chat ids reach the ledger
+    assert h.fam.state().approvals[apr].state.value == "GRANTED"
+
+
+def test_retryable_kernel_refusal_keeps_the_prompt_usable(
+    h: Harness, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from serene.ledger.service import AdmissionRejected
+
+    _, apr = _pending_approval(h)
+    (prompt,) = h.prompter.prompt_pending_approvals(h.fam.child_id)
+    data = h.outbox.sent[0][2][0][1]
+    real_append = h.fam.ledger.append_event
+    calls = {"n": 0}
+
+    def too_early(draft: Any) -> Any:
+        calls["n"] += 1
+        if calls["n"] == 1:  # first tap lands inside an AMBER deliberation window
+            raise AdmissionRejected(["AMBER_DELIBERATION_TOO_SHORT"])
+        return real_append(draft)
+
+    monkeypatch.setattr(h.fam.ledger, "append_event", too_early)
+    early = h.tap(data, message_id=prompt.message_id)
+    assert early.outcome == "REJECTED"
+    assert early.reason_codes == ("AMBER_DELIBERATION_TOO_SHORT",)
+    later = h.tap(data, message_id=prompt.message_id)
+    assert later.outcome == "APPROVAL_GRANTED"
+    assert h.fam.state().approvals[apr].state.value == "GRANTED"
