@@ -189,3 +189,10 @@ def test_a_second_invalid_reply_still_fails_closed(rig: Rig) -> None:
     result = rig.runtime.run(rig.task())
     assert result.status == "FAILED" and result.proposals == ()
     assert isinstance(rig.runtime, HermesAgentRuntime)
+
+
+def test_contract_says_hypothesis_evidence_lists_take_evidence_ids_only() -> None:
+    """Live 2026-10-11: two runs lost every hypothesis to ITEM_WRONG_KIND for obs_ ids here."""
+    contract = propose_contract(FORMING)
+    assert '"supporting_evidence_ids":[0-32 evd ids]' in contract
+    assert "evd_ ids only" in contract and "never obs_/pat_/hyp_ ids" in contract

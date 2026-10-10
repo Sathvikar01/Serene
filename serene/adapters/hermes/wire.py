@@ -335,12 +335,14 @@ def _shapes() -> dict[str, str]:
         "hypothesis": (
             '{"kind":"hypothesis","ref":"H1","pattern_refs":['
             f'{_n(h, "pattern_refs")} "P1"-style refs or pat ids],"statement":text,'
-            f'"supporting_evidence_ids":[{_n(h, "supporting_evidence_ids")} ids],'
-            f'"counter_evidence_ids":[{_n(h, "counter_evidence_ids")} ids],'
+            f'"supporting_evidence_ids":[{_n(h, "supporting_evidence_ids")} evd ids],'
+            f'"counter_evidence_ids":[{_n(h, "counter_evidence_ids")} evd ids],'
             f'"alternative_explanations":[{_n(h, "alternative_explanations")} texts],'
             f'"known_confounders":[{_n(h, "known_confounders")} texts],'
             f'"falsification_criteria":[{_n(h, "falsification_criteria")} texts],'
-            f'"contexts":[{_n(h, "contexts")} tags],"supersedes":null or a hyp id}}'
+            f'"contexts":[{_n(h, "contexts")} tags],"supersedes":null or a hyp id}}\n'
+            "   supporting_evidence_ids and counter_evidence_ids hold evd_ ids only (reports or\n"
+            "   web captures), never obs_/pat_/hyp_ ids; observations count through patterns."
         ),
         "experiment": (
             '{"kind":"experiment","hypothesis_ref":"H1" or a hyp id,'
