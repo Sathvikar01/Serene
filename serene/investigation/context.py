@@ -74,11 +74,18 @@ _STOP: Final = frozenset(
 )
 
 
+def _stem(word: str) -> str:
+    """Tiny deterministic plural fold ("pickups" -> "pickup"); no NLP, no embeddings."""
+    if len(word) > 4 and word.endswith("s") and not word.endswith("ss"):
+        return word[:-1]
+    return word
+
+
 def terms_of(*texts: str) -> frozenset[str]:
     """Deterministic, lower-cased content words (>=4 chars, minus stopwords)."""
     out: set[str] = set()
     for text in texts:
-        out |= {w for w in _WORD.findall(text.casefold()) if w not in _STOP}
+        out |= {_stem(w) for w in _WORD.findall(text.casefold()) if w not in _STOP}
     return frozenset(out)
 
 

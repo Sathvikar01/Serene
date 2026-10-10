@@ -164,10 +164,14 @@ class MinimumDataPolicy:
             safety=self.safety(candidate),
             evidence_required=required,
             information_value=self.information_value(candidate, frozenset(live)),
-            cost_micro_usd=self._cost.estimate_cost_micro_usd(
-                f"acquire:{candidate.acquisition_mode.value}"
-            ),
+            cost_micro_usd=self._cost_of(candidate),
         )
+
+    def _cost_of(self, candidate: EvidenceCandidate) -> int | None:
+        """Candidate-specific estimate if the cost table has one, else the mode's."""
+        mode = f"acquire:{candidate.acquisition_mode.value}"
+        specific = self._cost.estimate_cost_micro_usd(f"{mode}:{candidate.candidate_id}")
+        return specific if specific is not None else self._cost.estimate_cost_micro_usd(mode)
 
     # ------------------------------------------------------------------ selection
     def select(

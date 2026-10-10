@@ -42,6 +42,9 @@ def structure_reply(statement: str, contexts: Iterable[str] = ("daycare_pickup",
 
     def reply(request: HermesRequest) -> HermesResponse:
         evidence = evidence_ids_in(request)
+        focus = re.search(r"TASK structure-([0-9a-f]{16})-", request.input)
+        if focus is not None:  # the report being structured, not merely the newest one
+            evidence = [e for e in evidence if e.startswith("evd_" + focus.group(1))] or evidence
         return wire_response(
             {
                 "proposals": [
