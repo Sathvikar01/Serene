@@ -12,8 +12,8 @@ under eval/reports/local/live/<label>-<utc>/:
     traces/serene__<scenario>.jsonl    SafeTelemetry records (already redacted)
 
 When NEATLOGS_API_KEY is set the same redacted records are also sent to
-neatlogs (one trace per run; the run id is the neatlogs session id) through
-`serene.adapters.neatlogs_sink.build_sink`; the run id is the trace handle.
+neatlogs through `serene.adapters.neatlogs_sink.build_sink`, in traces under
+~8 KiB that share one session id: the run id is the neatlogs session handle.
 """
 
 from __future__ import annotations
@@ -49,6 +49,11 @@ from serene.adapters.browser.hermes_browser import BROWSER_PROMPT_VERSION  # noq
 from serene.adapters.hermes import transport_from_env  # noqa: E402
 from serene.adapters.hermes.runtime import PROMPT_VERSION  # noqa: E402
 
+# neatlogs ingest answers HTTP 403 to request bodies over ~8 KiB (measured 2026-10-10:
+# 8150 bytes accepted, 8364 refused), so one run goes out as several traces that share
+# the run's session id. Records are counted before the sink's own envelope, hence margin.
+_NEATLOGS_BATCH_BYTES = 5_500
+
 
 def _git() -> dict[str, Any]:
     def run(*args: str) -> str:
@@ -81,11 +86,23 @@ def _neatlogs(run_id: str, result: LiveResult) -> dict[str, Any]:
     sink = build_sink("serene-live-eval")
     if hasattr(sink, "session_id"):  # HTTP sink: the run id is the neatlogs session handle
         sink.session_id = run_id
-    for name, attrs in result.traces:  # already redacted by SafeTelemetry
-        sink.emit(name, attrs)
     flush = getattr(sink, "flush", None)
-    sent = bool(flush()) if callable(flush) else True
-    return {"sent": sent, "session_id": run_id, "spans": len(result.traces)}
+    batches = sent = size = 0
+    for name, attrs in result.traces:  # already redacted by SafeTelemetry
+        record = len(json.dumps({"name": name, "attributes": attrs}, default=str))
+        if callable(flush) and size and size + record > _NEATLOGS_BATCH_BYTES:
+            batches, sent, size = batches + 1, sent + bool(flush()), 0
+        sink.emit(name, attrs)
+        size += record
+    if callable(flush) and size:
+        batches, sent = batches + 1, sent + bool(flush())
+    return {
+        "sent": sent == batches if callable(flush) else True,
+        "session_id": run_id,
+        "spans": len(result.traces),
+        "batches": batches,
+        "batches_sent": sent,
+    }
 
 
 def _summary(rows: list[dict[str, Any]]) -> dict[str, Any]:

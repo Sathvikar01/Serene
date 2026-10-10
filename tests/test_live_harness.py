@@ -10,7 +10,10 @@ frozen browse oracle, and nothing but the pinned page can be re-fetched.
 from __future__ import annotations
 
 import dataclasses
+import json
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 from eval.scenarios.runtime_live import (
     LIVE_ALLOWED,
@@ -59,3 +62,41 @@ def test_live_oracle_only_moves_the_browse_allowlist() -> None:
         expected = LIVE_ALLOWED if frozen.allowed_domains else ()
         assert live.allowed_domains == expected
         assert dataclasses.replace(live, allowed_domains=frozen.allowed_domains) == frozen
+
+
+class _RecordingSink:
+    def __init__(self) -> None:
+        self.session_id: str | None = None
+        self.pending: list[tuple[str, dict[str, object]]] = []
+        self.posted: list[list[tuple[str, dict[str, object]]]] = []
+
+    def emit(self, name: str, attributes: dict[str, object]) -> None:
+        self.pending.append((name, attributes))
+
+    def flush(self) -> bool:
+        self.posted.append(self.pending)
+        self.pending = []
+        return True
+
+
+def test_neatlogs_upload_is_split_under_the_ingest_body_limit(monkeypatch: Any) -> None:
+    from eval.runners import runtime_live_compare as runner
+    from serene.adapters import neatlogs_sink
+
+    sink = _RecordingSink()
+    monkeypatch.setenv("NEATLOGS_API_KEY", "test-not-a-key")
+    monkeypatch.setattr(neatlogs_sink, "build_sink", lambda _name: sink)
+    traces = [("runtime.call", {"event_id": f"evt_{i:032x}", "status": "OK"}) for i in range(200)]
+    out = runner._neatlogs("run-1", SimpleNamespace(traces=traces))  # type: ignore[arg-type]
+    assert out == {
+        "sent": True,
+        "session_id": "run-1",
+        "spans": 200,
+        "batches": len(sink.posted),
+        "batches_sent": len(sink.posted),
+    }
+    assert sink.session_id == "run-1" and len(sink.posted) > 1
+    assert [t for batch in sink.posted for t in batch] == traces  # nothing lost or reordered
+    for batch in sink.posted:
+        size = sum(len(json.dumps({"name": n, "attributes": a})) for n, a in batch)
+        assert size <= runner._NEATLOGS_BATCH_BYTES
