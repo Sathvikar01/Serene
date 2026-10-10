@@ -44,6 +44,10 @@ class EvidenceBrowseRequest(KernelModel):
         "upload",
         "send_message",
     )
+    # Additive (branch A): what the evidence must be about and how fresh it must
+    # be. The verifier checks both; the browser never decides validity.
+    subject: Tag | None = None
+    max_age_days: int | None = Field(default=None, ge=1, le=3650)
 
 
 class EvidenceBrowseResult(KernelModel):

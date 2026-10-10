@@ -16,11 +16,13 @@ from serene.domain.entities import (
     TERMINAL_INVESTIGATION_STATUSES,
     Evidence,
     EvidenceKind,
+    InvestigationPhase,
     InvestigationStatus,
     LearningStatus,
     OutcomeResult,
 )
 from serene.domain.events import (
+    AcquisitionMode,
     ApprovalGranted,
     ApprovalNudged,
     ApprovalRejected,
@@ -30,7 +32,9 @@ from serene.domain.events import (
     EventDraft,
     EventType,
     EvidenceAcquired,
+    EvidenceAcquisitionFailed,
     EvidenceRejected,
+    EvidenceRequested,
     EvidenceVerified,
     ExperimentAbandoned,
     ExperimentBlocked,
@@ -43,6 +47,7 @@ from serene.domain.events import (
     HypothesisRefuted,
     HypothesisSuperseded,
     InvestigationOpened,
+    InvestigationPhaseChanged,
     InvestigationStatusChanged,
     LearningRecorded,
     LearningStatusChanged,
@@ -54,6 +59,7 @@ from serene.domain.events import (
     MemoryPatchReviewed,
     ObservationReported,
     ObservationStructured,
+    ObservationStructuringFailed,
     OutcomeReported,
     PatternProposed,
     PromotionDecisionRecord,
@@ -61,9 +67,15 @@ from serene.domain.events import (
 )
 from serene.domain.values import AUTHENTICATED_CHANNELS, EpistemicLevel, VerificationStatus
 from serene.lineage.provenance import provenance_violations
-from serene.policies import approval, memory_review, promotion, safety
+from serene.policies import approval, investigation, memory_review, promotion, safety
 from serene.policies.decision import PolicyDecision
 from serene.policies.experiments import outcome_due_at
+from serene.policies.external_evidence import (
+    EXTERNAL_KINDS,
+    domain_allowed,
+    external_verification_violations,
+    host_of,
+)
 from serene.policies.learning import LEARNING_TRANSITIONS, check_status_change
 from serene.projections.state import ExperimentStatus, KernelState, LifecycleStatus
 
@@ -115,12 +127,62 @@ def _undecided_patch(patch_id: str, state: KernelState) -> list[str]:
     return []
 
 
+def _check_answer(request_id: str, state: KernelState) -> list[str]:
+    record = state.evidence_requests.get(request_id)
+    if record is None:
+        return ["UNKNOWN_EVIDENCE_REQUEST"]
+    reasons: list[str] = []
+    if record.request.acquisition_mode is not AcquisitionMode.ASK_PARENT:
+        reasons.append("REQUEST_NOT_A_QUESTION")
+    if not record.open:
+        reasons.append("REQUEST_NOT_OPEN")
+    return reasons
+
+
+def _check_acquired_for_request(ev: Evidence, request_id: str, state: KernelState) -> list[str]:
+    record = state.evidence_requests.get(request_id)
+    if record is None:
+        return ["UNKNOWN_EVIDENCE_REQUEST"]
+    reasons: list[str] = []
+    if record.request.acquisition_mode is not AcquisitionMode.BROWSE:
+        reasons.append("REQUEST_NOT_A_BROWSE_REQUEST")
+    if record.exhausted:
+        reasons.append("REQUEST_EXHAUSTED")
+    if not domain_allowed(host_of(ev.source.uri), record.request.allowed_domains):
+        reasons.append("SOURCE_DOMAIN_NOT_ALLOWED")
+    return reasons
+
+
+def _check_evidence_request(p: EvidenceRequested, state: KernelState) -> list[str]:
+    reasons = investigation.investigation_accepts_work(p.investigation_id, state)
+    if p.request_id in state.evidence_requests:
+        reasons.append("DUPLICATE_EVIDENCE_REQUEST")
+    phase = state.investigation_phases.get(p.investigation_id)
+    if phase is not None and phase is not InvestigationPhase.NEEDS_EVIDENCE:
+        reasons.append(f"WRONG_PHASE:{phase.value}")
+    if p.acquisition_mode is None:
+        reasons.append("ACQUISITION_MODE_REQUIRED")
+    elif p.acquisition_mode is AcquisitionMode.ASK_PARENT and p.question is None:
+        reasons.append("QUESTION_REQUIRED")
+    elif p.acquisition_mode is AcquisitionMode.BROWSE and (
+        not p.allowed_domains or p.subject is None
+    ):
+        reasons.append("BROWSE_BOUNDS_REQUIRED")
+    active = set(investigation.active_hypotheses(p.investigation_id, state))
+    for prediction in p.predictions:
+        if prediction.hypothesis_id not in active:
+            reasons.append(f"PREDICTION_FOR_INACTIVE_HYPOTHESIS:{prediction.hypothesis_id}")
+    return reasons
+
+
 def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -> list[str]:
     p = draft.payload
     et = draft.event_type
     match p:
-        case ObservationReported(evidence=ev):
+        case ObservationReported(evidence=ev, request_id=request_id):
             reasons = _check_evidence(draft, ev, state)
+            if request_id is not None:
+                reasons += _check_answer(request_id, state)
             if ev.observer != draft.actor:
                 reasons.append("OBSERVER_MISMATCH")
             if ev.kind in _EXTERNAL_EVIDENCE:
@@ -131,10 +193,12 @@ def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -
             ):
                 reasons.append("UNAUTHENTICATED_CHANNEL")
             return reasons
-        case EvidenceAcquired(evidence=ev):
+        case EvidenceAcquired(evidence=ev, request_id=request_id):
             reasons = _check_evidence(draft, ev, state)
             if ev.kind not in _EXTERNAL_EVIDENCE:
                 reasons.append("ONLY_EXTERNAL_EVIDENCE_IS_ACQUIRED")
+            if request_id is not None:
+                reasons += _check_acquired_for_request(ev, request_id, state)
             return reasons
         case EvidenceVerified(evidence_id=evidence_id) | EvidenceRejected(evidence_id=evidence_id):
             status = state.verification_of(evidence_id)
@@ -142,11 +206,50 @@ def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -
                 return ["UNKNOWN_EVIDENCE"]
             if status is not VerificationStatus.UNVERIFIED:
                 return [f"ALREADY_DECIDED:{status.value}"]
+            entity = state.entities[evidence_id].entity
+            if (
+                isinstance(p, EvidenceVerified)
+                and isinstance(entity, Evidence)
+                and entity.kind in EXTERNAL_KINDS
+            ):
+                return external_verification_violations(entity, p.checks_passed, state)
             return []
+        case EvidenceRequested():
+            return _check_evidence_request(p, state)
+        case EvidenceAcquisitionFailed(request_id=request_id, attempt=attempt):
+            request_record = state.evidence_requests.get(request_id)
+            if request_record is None:
+                return ["UNKNOWN_EVIDENCE_REQUEST"]
+            reasons = []
+            if request_record.request.acquisition_mode is not AcquisitionMode.BROWSE:
+                reasons.append("REQUEST_NOT_A_BROWSE_REQUEST")
+            if not request_record.open:
+                reasons.append("REQUEST_NOT_OPEN")
+            if attempt != request_record.failed_attempts + 1:
+                reasons.append(f"ATTEMPT_OUT_OF_ORDER:{request_record.failed_attempts}")
+            return reasons
+        case ObservationStructuringFailed(evidence_id=evidence_id, attempt=attempt):
+            reasons = []
+            evidence_record = state.entities.get(evidence_id)
+            if evidence_record is None or evidence_record.kind != "evd":
+                reasons.append("UNKNOWN_EVIDENCE")
+            if attempt != state.structuring_failures.get(evidence_id, 0) + 1:
+                reasons.append("ATTEMPT_OUT_OF_ORDER")
+            return reasons
+        case InvestigationPhaseChanged():
+            return _reasons(investigation.check_phase_transition(p, state))
         case ObservationStructured(observation=entity) | PatternProposed(pattern=entity):
             return _reasons(promotion.check_introduction(entity, state))
         case HypothesisProposed(hypothesis=hypothesis):
-            return _reasons(promotion.check_introduction(hypothesis, state))
+            reasons = _reasons(promotion.check_introduction(hypothesis, state))
+            reasons += [
+                r
+                for r in investigation.investigation_accepts_work(
+                    hypothesis.investigation_id, state
+                )
+                if r.startswith("INVESTIGATION_PHASE_TERMINAL")
+            ]
+            return reasons
         case HypothesisSuperseded(hypothesis_id=old, superseded_by=new):
             reasons = []
             for hyp in (old, new):
