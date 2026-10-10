@@ -55,6 +55,8 @@ class EvidenceBrowseResult(KernelModel):
     status: Literal["ACQUIRED", "NOT_FOUND", "BLOCKED", "BUDGET_EXHAUSTED", "FAILED"]
     evidence: tuple[Evidence, ...] = Field(default=(), max_length=16)
     actions_used: int = Field(ge=0)
+    # Additive (branch A): machine-readable why (e.g. FORBIDDEN_TOOL:browser_type).
+    reason_codes: tuple[ReasonCode, ...] = Field(default=(), max_length=32)
 
 
 class VerificationVerdict(KernelModel):

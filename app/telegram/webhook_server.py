@@ -28,6 +28,7 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8787)
     args = parser.parse_args()
 
+    from serene.adapters.browser import HermesBrowser, SafeHttpsFetcher
     from serene.adapters.clock import SystemClock
     from serene.adapters.hermes import HermesAgentRuntime, transport_from_env
     from serene.adapters.neatlogs_sink import build_telemetry
@@ -39,7 +40,9 @@ def main() -> int:
         bindings_from_env,
     )
     from serene.adapters.telegram.wsgi import make_wsgi_app
-    from serene.investigation.assembly import build_stack
+    from serene.evidence.service import EvidenceService
+    from serene.evidence.verifier import IndependentEvidenceVerifier
+    from serene.investigation.assembly import KernelActors, build_stack
     from serene.ledger.service import EventLedger
 
     missing = [
@@ -56,7 +59,9 @@ def main() -> int:
 
     clock = SystemClock()
     telemetry = build_telemetry("serene-telegram")
-    ledger = EventLedger(PostgresEventStore(os.environ["SUPABASE_DB_URL"]), clock, telemetry=telemetry)
+    ledger = EventLedger(
+        PostgresEventStore(os.environ["SUPABASE_DB_URL"]), clock, telemetry=telemetry
+    )
 
     def runtime_factory(retriever, actors):  # type: ignore[no-untyped-def]
         return HermesAgentRuntime(
@@ -78,12 +83,32 @@ def main() -> int:
         for d in os.environ.get("SERENE_BROWSER_ALLOWED_DOMAINS", "").split(",")
         if d.strip()
     )
+    actors = KernelActors.derived()
+    # Web evidence only with an explicit allowlist; without one every BROWSE
+    # candidate is UNSAFE and the investigation asks the parent instead.
+    evidence = (
+        EvidenceService(
+            ledger,
+            clock,
+            browser=HermesBrowser(
+                transport, clock=clock, observer=actors.system, telemetry=telemetry
+            ),
+            verifier=IndependentEvidenceVerifier(clock, fetcher=SafeHttpsFetcher()),
+            system_actor=actors.system,
+            verifier_actor=actors.verifier,
+            telemetry=telemetry,
+        )
+        if allowlist
+        else None
+    )
     stack = build_stack(
         ledger,
         clock,
         runtime_factory=runtime_factory,
         telemetry=telemetry,
         browse_allowlist=allowlist,
+        evidence=evidence,
+        actors=actors,
     )
     bindings = bindings_from_env()
     prompts = InMemoryPromptRegistry()

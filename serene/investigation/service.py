@@ -348,12 +348,15 @@ class InvestigationService:
             return self._move(
                 child, inv, _P.RESEARCHING, _P.NEEDS_EVIDENCE, "ACQUISITION_EXHAUSTED"
             )
+        # Yield to the scheduler: the next tick retries (backoff = tick interval), and
+        # the ledger-counted attempt budget bounds how often that can happen.
         return StepResult(
             inv,
             _P.RESEARCHING,
             None,
             "RETRY_SCHEDULED",
             (f"ATTEMPTS_USED:{record.failed_attempts}",),
+            waiting=True,
         )
 
     def _verifying(self, child: str, inv: str, state: KernelState) -> StepResult:

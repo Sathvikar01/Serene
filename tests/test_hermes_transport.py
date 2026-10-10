@@ -88,3 +88,44 @@ def test_http_transport_refuses_plaintext_remote_hosts_and_missing_keys() -> Non
 def test_unconfigured_environment_yields_no_transport(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("HERMES_API_SERVER_KEY", raising=False)
     assert transport_from_env() is None
+
+
+def test_installed_hermes_responses_shape_is_parsed() -> None:
+    """Shape of hermes-agent v0.21.6 `/v1/responses` (gateway/platforms/
+    api_server_openai_routes.py `_extract_output_items`): reasoning items, completed
+    function_call / function_call_output replays, then one final message."""
+    payload = {
+        "id": "resp_abc",
+        "object": "response",
+        "status": "completed",
+        "model": "hermes-agent",
+        "output": [
+            {"type": "reasoning", "summary": [{"type": "summary_text", "text": "plan"}]},
+            {
+                "id": "fc_1",
+                "type": "function_call",
+                "status": "completed",
+                "name": "web_extract",
+                "arguments": '{"urls": ["https://example.org/policy"]}',
+                "call_id": "call_1",
+            },
+            {
+                "id": "fco_1",
+                "type": "function_call_output",
+                "status": "completed",
+                "call_id": "call_1",
+                "output": "Pickup 15:00-17:30",
+            },
+            {
+                "type": "message",
+                "role": "assistant",
+                "content": [{"type": "output_text", "text": '{"contract": "x"}'}],
+            },
+        ],
+        "usage": {"input_tokens": 12, "output_tokens": 3, "total_tokens": 15},
+    }
+    response = parse_responses_payload(payload)
+    assert response.output_text == '{"contract": "x"}'  # reasoning never leaks into the answer
+    (call,) = response.tool_calls
+    assert (call.name, call.output) == ("web_extract", "Pickup 15:00-17:30")
+    assert response.usage.output_tokens == 3

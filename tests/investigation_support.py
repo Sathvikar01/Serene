@@ -159,7 +159,7 @@ def make_investigation_rig(
         telemetry=telemetry,
         cost_model=TableCostModel({"acquire:BROWSE": 2_000, "acquire:ASK_PARENT": 0}),
         browse_allowlist=browse_allowlist,
-        evidence=evidence(family, telemetry) if callable(evidence) else evidence,
+        evidence=evidence(family, telemetry, transport) if callable(evidence) else evidence,
         asker=prompter,
         actors=actors,
         budget=budget,
