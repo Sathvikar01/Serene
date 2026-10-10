@@ -52,7 +52,7 @@ from serene.policies.external_evidence import domain_allowed, host_of
 from serene.ports.clock import Clock
 from serene.ports.evidence import EvidenceBrowseRequest, EvidenceBrowseResult
 
-BROWSER_PROMPT_VERSION: Final = "serene-browse/1"
+BROWSER_PROMPT_VERSION: Final = "serene-browse/2"
 # Hermes tools that only read. Anything else (click, type, press, file tools,
 # messaging, code execution...) is outside the browse capability.
 READ_ONLY_TOOLS: Final = frozenset(
@@ -315,7 +315,9 @@ def _render_request(request: EvidenceBrowseRequest, pinned: tuple[str, ...] = ()
         '   "excerpt": "<verbatim page text containing every value>"}]}\n'
         "At most 4 captures, each from a page you opened with web_extract or "
         'browser_navigate. If nothing qualifies reply {"contract": "'
-        f'{WIRE_VERSION}", "captures": []}}.'
+        f'{WIRE_VERSION}", "captures": []}}.\n'
+        "Leave out any requested field the page does not state, without comment: the "
+        "reply is that JSON object alone, with no text before or after it."
     )
 
 
