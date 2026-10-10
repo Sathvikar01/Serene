@@ -71,7 +71,6 @@ from serene.policies import approval, investigation, memory_review, promotion, s
 from serene.policies.decision import PolicyDecision
 from serene.policies.experiments import outcome_due_at
 from serene.policies.external_evidence import (
-    EXTERNAL_KINDS,
     domain_allowed,
     external_verification_violations,
     host_of,
@@ -210,7 +209,7 @@ def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -
             if (
                 isinstance(p, EvidenceVerified)
                 and isinstance(entity, Evidence)
-                and entity.kind in EXTERNAL_KINDS
+                and entity.kind in _EXTERNAL_EVIDENCE
             ):
                 return external_verification_violations(entity, p.checks_passed, state)
             return []
@@ -481,5 +480,5 @@ def admission_violations(draft: EventDraft, state: KernelState, now: datetime) -
                 ]
             return reasons  # fail closed until the owning policy lands
         case _:
-            # EVIDENCE_REQUESTED and PROMOTION_REQUESTED carry no authority.
+            # PROMOTION_REQUESTED carries no authority.
             return []

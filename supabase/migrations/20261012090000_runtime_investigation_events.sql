@@ -1,8 +1,9 @@
 -- Branch A (feat/runtime-investigation-evidence): extend the closed event
 -- vocabulary with the observation / evidence / investigation events added in
--- serene.domain.events. The foundation migration is never edited; this file
--- regenerates the event_type check constraint (kept honest by
--- tests/test_migrations.py, which reads the latest definition).
+-- serene.domain.events. Applied migrations are never edited; this file
+-- regenerates the event_type check constraint as the COMPLETE current union
+-- (foundation + branch B 20261011090000 + branch A), kept honest by
+-- tests/test_migrations.py, which reads the latest definition.
 --
 --   OBSERVATION_STRUCTURING_FAILED  structured extraction failed; raw evidence untouched
 --   EVIDENCE_ACQUISITION_FAILED     one failed, ledger-counted acquisition attempt
@@ -39,6 +40,7 @@ alter table serene.domain_events
       'OUTCOME_REPORTED',
       'EXPERIMENT_COMPLETED',
       'EXPERIMENT_ABANDONED',
+      'EXPERIMENT_OUTCOME_TIMED_OUT',
       'APPROVAL_REQUESTED',
       'APPROVAL_NUDGED',
       'APPROVAL_GRANTED',
@@ -49,5 +51,7 @@ alter table serene.domain_events
       'LEARNING_SUPERSEDED',
       'MEMORY_PATCH_PROPOSED',
       'MEMORY_PATCH_COMMITTED',
-      'MEMORY_PATCH_REJECTED'
+      'MEMORY_PATCH_REJECTED',
+      'MEMORY_PATCH_REVIEWED',
+      'MEMORY_DREAM_STAGE_RECORDED'
   ));
