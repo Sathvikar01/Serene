@@ -112,3 +112,22 @@ def test_a_red_experiment_is_blocked_and_never_reaches_the_parent() -> None:
     assert EventType.APPROVAL_REQUESTED not in [e.event_type for e in rig.events()]
     assert all("supplement" not in text for _c, text, _b in rig.outbox.sent)
     assert P.NEEDS_APPROVAL not in [r.to_phase for r in steps]
+
+
+def test_after_a_parent_declines_the_model_is_not_offered_experiments_again() -> None:
+    """Live 2026-10-11: the parent was prompted five times in a row after declining."""
+    rig, inv, script, _steps = _to_evaluating(
+        "approval-decline", _experiment("ROUTINE_TIMING", "Give a two-minute warning")
+    )
+    prompts = len(rig.outbox.sent)
+    assert script.tap_last(1).outcome == "APPROVAL_REJECTED"
+    # The model tries again; the experiment kind is no longer offered, so it is refused.
+    rig.transport.push("propose", _experiment("ROUTINE_TIMING", "Try a shorter warning"))
+    rig.transport.push("plan_evidence", plan_reply(_after_answer))
+    after = rig.stack.investigations.drive(rig.family.child_id, inv)
+    sent = rig.transport.requests[-2].input
+    assert '"kind":"experiment"' not in sent and "The parent declined an experiment" in sent
+    assert len(rig.outbox.sent) == prompts  # never asked again
+    state = rig.stack.ledger.replay_events(rig.family.child_id)
+    assert len(state.experiments) == 1
+    assert P.NEEDS_APPROVAL not in [r.to_phase for r in after]

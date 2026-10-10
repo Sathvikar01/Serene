@@ -71,7 +71,12 @@ from serene.observability.telemetry import SafeTelemetry
 from serene.policies.investigation import active_hypotheses, latest_request
 from serene.ports.agent_runtime import AgentRuntime, AgentTask, ProposalKind
 from serene.ports.clock import Clock
-from serene.projections.state import ExperimentStatus, KernelState, LifecycleStatus
+from serene.projections.state import (
+    ApprovalState,
+    ExperimentStatus,
+    KernelState,
+    LifecycleStatus,
+)
 
 _P = InvestigationPhase
 _MODEL_PHASES: Final = frozenset({_P.FORMING_HYPOTHESES, _P.EVALUATING})
@@ -390,6 +395,10 @@ class InvestigationService:
         return self._move(child, inv, _P.VERIFYING, _P.EVALUATING, "EVIDENCE_DECIDED")
 
     def _evaluating(self, child: str, inv: str, state: KernelState) -> StepResult:
+        kinds: set[ProposalKind] = {"pattern", "hypothesis", "need_evidence", "abstain"}
+        declined = self._parent_declined_an_experiment(inv, state)
+        if not declined:
+            kinds.add("experiment")
         report = self._model_step(
             child,
             inv,
@@ -397,10 +406,15 @@ class InvestigationService:
             phase=_P.EVALUATING,
             goal=(
                 "Re-evaluate the competing hypotheses against the verified evidence. Revise a "
-                "hypothesis only by proposing a successor that supersedes it; propose at most "
-                "one reversible experiment only if evidence alone cannot discriminate."
+                "hypothesis only by proposing a successor that supersedes it. "
+                + (
+                    "The parent declined an experiment: propose none."
+                    if declined
+                    else "Propose at most one reversible experiment, only if evidence alone "
+                    "cannot discriminate."
+                )
             ),
-            kinds={"pattern", "hypothesis", "experiment", "need_evidence", "abstain"},
+            kinds=kinds,
         )
         if isinstance(report, StepResult):
             return report
@@ -432,6 +446,16 @@ class InvestigationService:
         if len(fresh.investigation_requests.get(inv, [])) >= self._budget.max_evidence_rounds:
             return self._park(child, inv, _P.EVALUATING, "EVIDENCE_BUDGET_EXHAUSTED")
         return self._move(child, inv, _P.EVALUATING, _P.NEEDS_EVIDENCE, "MORE_EVIDENCE_USEFUL")
+
+    @staticmethod
+    def _parent_declined_an_experiment(inv: str, state: KernelState) -> bool:
+        """A parent's REJECT stands for the rest of the investigation: code stops offering
+        the model the experiment kind, so the parent is not asked again and again."""
+        return any(
+            approval.state is ApprovalState.REJECTED
+            and state.experiments[approval.experiment_id].experiment.investigation_id == inv
+            for approval in state.approvals.values()
+        )
 
     def _seek_approval(self, child: str, inv: str, experiment_ids: list[str]) -> bool:
         """Classify each proposal (POLICY) and ask the opening parent to decide the eligible
