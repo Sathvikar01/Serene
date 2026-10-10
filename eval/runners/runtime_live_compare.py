@@ -12,7 +12,7 @@ under eval/reports/local/live/<label>-<utc>/:
     traces/serene__<scenario>.jsonl    SafeTelemetry records (already redacted)
 
 When NEATLOGS_API_KEY is set the same redacted records are also sent to
-neatlogs (one trace per run, `NEATLOGS_SESSION_ID` = the run id) through
+neatlogs (one trace per run; the run id is the neatlogs session id) through
 `serene.adapters.neatlogs_sink.build_sink`; the run id is the trace handle.
 """
 
@@ -73,10 +73,11 @@ def _health() -> Any:
 def _neatlogs(run_id: str, result: LiveResult) -> dict[str, Any]:
     if not os.environ.get("NEATLOGS_API_KEY") or not result.traces:
         return {"sent": False, "reason": "NEATLOGS_API_KEY unset" if result.traces else "no traces"}
-    os.environ["NEATLOGS_SESSION_ID"] = run_id
     from serene.adapters.neatlogs_sink import build_sink
 
     sink = build_sink("serene-live-eval")
+    if hasattr(sink, "session_id"):  # HTTP sink: the run id is the neatlogs session handle
+        sink.session_id = run_id
     for name, attrs in result.traces:  # already redacted by SafeTelemetry
         sink.emit(name, attrs)
     flush = getattr(sink, "flush", None)

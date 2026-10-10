@@ -158,7 +158,7 @@ Hermes key. Hermes must not poll the same bot whose webhook Serene serves.
   runtime-visible facts only), the same injected environment faults, the real web on
   the same allowlist. Each run keeps the raw exchanges, the redacted trace and the
   scorer rows under `eval/reports/local/live/` (and sends the trace to neatlogs when
-  `NEATLOGS_API_KEY` is set, `NEATLOGS_SESSION_ID` = the run id).
+  `NEATLOGS_API_KEY` is set; the run id is the neatlogs session id).
 * `uv run python eval/runners/runtime_compare.py` writes
   `eval/reports/local/runtime_compare.json`. Baseline rows are `UNAVAILABLE` until
   a live Hermes API server is configured: scripted baseline replies would be an
