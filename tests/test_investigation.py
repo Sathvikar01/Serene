@@ -655,11 +655,11 @@ def test_at_most_one_item_is_selected_and_low_value_is_never_asked() -> None:
     assert ("low", "LOW_VALUE") in selection.excluded
 
 
-def test_none_is_returned_when_the_investigation_is_sufficient() -> None:
+def test_none_is_returned_when_no_suggestion_is_admissible() -> None:
     ctx, _ = _ctx_with_two_hypotheses()
     selection = _policy().select([_ask("low", {}, ("x",))], ctx)
-    assert selection.sufficient and selection.chosen is None
-    assert _policy().select([], ctx).sufficient
+    assert selection.chosen is None
+    assert _policy().select([], ctx).chosen is None
 
 
 def test_no_numeric_precision_is_emitted() -> None:

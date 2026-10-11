@@ -125,7 +125,7 @@ def test_after_a_parent_declines_the_model_is_not_offered_experiments_again() ->
     rig.transport.push("propose", _experiment("ROUTINE_TIMING", "Try a shorter warning"))
     rig.transport.push("plan_evidence", plan_reply(_after_answer))
     after = rig.stack.investigations.drive(rig.family.child_id, inv)
-    sent = rig.transport.requests[-2].input
+    sent = [r for r in rig.transport.requests if r.purpose == "propose"][-1].input
     assert '"kind":"experiment"' not in sent and "The parent declined an experiment" in sent
     assert len(rig.outbox.sent) == prompts  # never asked again
     state = rig.stack.ledger.replay_events(rig.family.child_id)

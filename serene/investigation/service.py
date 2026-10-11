@@ -11,21 +11,27 @@ guards, so a refused transition leaves the investigation where it was.
     FORMING_HYPOTHESES model proposes patterns + competing hypotheses;
                        >= 2 admitted                                  -> NEEDS_EVIDENCE
     NEEDS_EVIDENCE     planner suggests; MinimumDataPolicy picks at most
-                       one missing observation, or none (sufficient) -> ASKING_HUMAN |
-                                                                        RESEARCHING | EVALUATING
+                       one missing observation (none admissible parks) -> ASKING_HUMAN |
+                                                                        RESEARCHING
     ASKING_HUMAN       one YES/NO/UNSURE question; answered           -> VERIFYING
     RESEARCHING        bounded browser, retries counted in the ledger -> VERIFYING |
                                                                         NEEDS_EVIDENCE (exhausted)
     VERIFYING          independent verifier decides every acquisition -> EVALUATING
     EVALUATING         model may revise (supersede) or propose an
-                       experiment; deterministic sufficiency decides  -> NEEDS_APPROVAL |
+                       experiment; then code decides from the ledger
+                       (sufficiency.py) - every live hypothesis told
+                       apart by decisive evidence completes; otherwise
+                       one more admissible request within budget, or
+                       park                                           -> NEEDS_APPROVAL |
                                                                         NEEDS_EVIDENCE | COMPLETE
     NEEDS_APPROVAL     the experiment lifecycle classifies each proposal (RED is
                        blocked); the opening parent decides the rest on an
                        authenticated prompt; expiry parks              -> EVALUATING
 
 Any phase parks honestly (PARKED_UNRESOLVED) on an exhausted budget, an
-unavailable runtime/planner, a missing parent response or no live hypothesis.
+unavailable runtime/planner, a missing parent response, no live hypothesis, or
+no admissible evidence request while the hypotheses are still not told apart.
+The planner never ends an investigation: an empty plan parks, it never completes.
 COMPLETE and PARKED_UNRESOLVED are terminal; `step` on them is a no-op.
 Budgets (model runs, evidence rounds, acquisition attempts) are counted from
 ledger events, so a restart never replenishes them.
@@ -66,6 +72,7 @@ from serene.domain.values import (
 from serene.investigation.boundary import BoundaryReport, KernelBoundary
 from serene.investigation.context import ContextRetriever, InvestigationContext
 from serene.investigation.minimum_data import EvidencePlanner, MinimumDataPolicy, Selection
+from serene.investigation.sufficiency import evidence_sufficient
 from serene.ledger.service import AdmissionRejected, EventLedger
 from serene.observability.telemetry import SafeTelemetry
 from serene.policies.investigation import active_hypotheses, latest_request
@@ -311,7 +318,8 @@ class InvestigationService:
         if selection is None:
             return self._park(child, inv, _P.NEEDS_EVIDENCE, "PLANNER_UNAVAILABLE")
         if selection.chosen is None:
-            return self._move(child, inv, _P.NEEDS_EVIDENCE, _P.EVALUATING, "EVIDENCE_SUFFICIENT")
+            # Only EVALUATING moves here, and only while evidence is not yet sufficient.
+            return self._park(child, inv, _P.NEEDS_EVIDENCE, "NO_ADMISSIBLE_EVIDENCE")
         candidate = selection.chosen.candidate
         request_id = self._new_id("erq")
         try:
@@ -429,12 +437,11 @@ class InvestigationService:
         # No proposal, or every proposal was blocked (RED / unfit) and needs no decision.
         fresh = self._ledger.replay_events(child)
         ctx = self._context(fresh, child, inv)
-        if not ctx.live_hypotheses():
+        live = ctx.live_hypotheses()
+        if not live:
             return self._park(child, inv, _P.EVALUATING, "NO_LIVE_HYPOTHESIS")
-        selection = self._select(child, inv, fresh, ctx)
-        if selection is None:
-            return self._park(child, inv, _P.EVALUATING, "PLANNER_UNAVAILABLE")
-        if selection.sufficient:
+        if evidence_sufficient(inv, fresh, {b.entity_id for b in live}):
+            # Decided before the planner is asked, so no suggestion can postpone it.
             return self._move(
                 child,
                 inv,
@@ -443,6 +450,11 @@ class InvestigationService:
                 "EVIDENCE_SUFFICIENT",
                 "COMPETING_HYPOTHESES_RETAINED",
             )
+        selection = self._select(child, inv, fresh, ctx)
+        if selection is None:
+            return self._park(child, inv, _P.EVALUATING, "PLANNER_UNAVAILABLE")
+        if selection.chosen is None:
+            return self._park(child, inv, _P.EVALUATING, "NO_ADMISSIBLE_EVIDENCE")
         if len(fresh.investigation_requests.get(inv, [])) >= self._budget.max_evidence_rounds:
             return self._park(child, inv, _P.EVALUATING, "EVIDENCE_BUDGET_EXHAUSTED")
         return self._move(child, inv, _P.EVALUATING, _P.NEEDS_EVIDENCE, "MORE_EVIDENCE_USEFUL")
@@ -535,7 +547,7 @@ class InvestigationService:
                 "child_id": child,
                 "investigation_id": inv,
                 "candidate_count": len(candidates),
-                "decision": "SUFFICIENT" if chosen is None else "SELECTED",
+                "decision": "NONE_ADMISSIBLE" if chosen is None else "SELECTED",
                 "information_value": "" if chosen is None else chosen.information_value.value,
                 "acquisition_mode": (
                     "" if chosen is None else chosen.candidate.acquisition_mode.value

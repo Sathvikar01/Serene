@@ -1,9 +1,11 @@
 """Minimum Sufficient Childhood Data + evidence acquisition priority (issues #13, #14).
 
-Selects **at most one** missing observation, or none when the investigation is
-already sufficient. The model may *suggest* candidates (requested fields, a
-yes/no question or bounded browse target, and what each live hypothesis
-predicts); every ranking input is then computed here, deterministically:
+Selects **at most one** missing observation, or none when no suggestion is
+admissible. Choosing none never means the investigation is sufficient: that is
+decided from ledger evidence (`serene.investigation.sufficiency`). The model may
+*suggest* candidates (requested fields, a yes/no question or bounded browse
+target, and what each live hypothesis predicts); every ranking input is then
+computed here, deterministically:
 
     information value (ordinal only)
         HIGH    live hypotheses predict *different* answers   (discriminates)
@@ -109,16 +111,12 @@ class ScoredCandidate:
 
 @dataclass(frozen=True, slots=True)
 class Selection:
-    """The single chosen candidate (or None == sufficient) and why the rest lost."""
+    """The single chosen candidate (or None: nothing admissible) and why the rest lost."""
 
     chosen: ScoredCandidate | None
     ranked: tuple[ScoredCandidate, ...]
     excluded: tuple[tuple[str, str], ...]
     policy_version: str = POLICY_VERSION
-
-    @property
-    def sufficient(self) -> bool:
-        return self.chosen is None
 
 
 class MinimumDataPolicy:
