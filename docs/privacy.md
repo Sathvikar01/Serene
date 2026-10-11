@@ -66,7 +66,7 @@ ingest limit, caps pending spans, and reports failures as codes (`HTTP_403`,
 - Model provenance records provider/model/prompt version, never prompts or
   private reasoning.
 
-## 5. Secrets and logging audit (#59)
+## 5. Secrets and logging audit (#59, incomplete)
 
 - `.env.example` documents the variables read by `serene/`, `scripts/`,
   `eval/`, Telegram ingress and the web build, with empty secret values (tested).
@@ -89,6 +89,12 @@ Audit commands, results, scope and limitations are in
 **synthetic** narratives as judging evidence. Raw evidence in the authenticated
 domain ledger is not a telemetry log; no real family record belongs in demo,
 test, eval, public artifacts or screenshots.
+
+The existing lexical telemetry filter still accepts some token-shaped
+credentials/person ids under otherwise allowed keys. Raw exception details in
+some adapters also remain exportable. A parallel #59 audit is preparing those
+corrections, but changes to frozen runtime files currently fail their pinned
+integrity checks. The audit is not complete, and #59 must remain open.
 
 ## 6. Non-goals
 

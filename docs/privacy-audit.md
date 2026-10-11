@@ -3,6 +3,11 @@
 Audit date: 12 October 2026 (Asia/Kolkata). Scope: the merged code plus canonical
 Maya demo/reset. This is a time-boxed repository audit, not a system redesign.
 
+**Status: incomplete.** This PR supplies the frontend/error and environment
+coverage corrections. A separate active audit on `chore/privacy-secrets-audit-59`
+has identified further defects and owns additional corrections. Do not merge
+conflicting #59 work or close #59 until the full acceptance criteria are proven.
+
 ## Findings and fixes
 
 | Check | Evidence/result |
@@ -23,6 +28,13 @@ The pattern scanner checks known credential formats; zero findings is the
 recorded scan result, not a claim that every possible secret encoding can be
 recognized. History scope is merged `main`, not a rewrite or modification of
 other active branches. The holdout was not opened or evaluated for this audit.
+
+Independent local probes confirm that an `act_` person id under `status`, and
+a credential-shaped token under `reason_codes`, survive the current filter.
+Existing Git/Postgres exception paths can also expose paths or raw error details.
+The parallel audit's corrections to `telemetry.py` and `neatlogs_sink.py` fail
+frozen `PROTECTED_RUNTIME_DRIFT` checks. Neither this PR nor the audit may refresh
+protected hashes or rewrite historical evidence to bypass that failure.
 
 The dependency finding is outside #59's credential/environment/log-redaction
 acceptance scope and is not fixed by these logging changes. The audit includes
