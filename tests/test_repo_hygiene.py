@@ -39,9 +39,16 @@ def test_env_example_documents_every_variable_the_code_reads() -> None:
     }
     pattern = re.compile(r"""(?:environ\.get|getenv|environ\[)\(?\s*["']([A-Z0-9_]+)["']""")
     referenced: set[str] = set()
-    for folder in ("serene", "scripts", "eval"):
+    for folder in ("serene", "scripts", "eval", "app/telegram"):
         for path in (ROOT / folder).rglob("*.py"):
             referenced |= set(pattern.findall(path.read_text(encoding="utf-8")))
+    # The web build aliases process.env as `env` in fixture-routes.mjs.
+    web_pattern = re.compile(r"\b(?:process\.)?env\.([A-Z][A-Z0-9_]+)")
+    for path in (ROOT / "app/web").rglob("*"):
+        if any(part in {"node_modules", ".next"} for part in path.parts):
+            continue
+        if path.suffix in {".ts", ".tsx", ".mjs", ".mts"}:
+            referenced |= set(web_pattern.findall(path.read_text(encoding="utf-8")))
     assert referenced, "expected at least one environment variable reference"
     assert referenced <= documented, sorted(referenced - documented)
 

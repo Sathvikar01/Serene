@@ -12,7 +12,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    // Error messages/stacks may contain family data or credentials.
+    console.error("SERENE_ROOT_RENDER_FAILED");
   }, [error]);
 
   return (

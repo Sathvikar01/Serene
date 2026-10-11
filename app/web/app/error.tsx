@@ -12,7 +12,8 @@ export default function SurfaceError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    // Error messages/stacks may contain family data or credentials.
+    console.error("SERENE_VIEW_RENDER_FAILED");
   }, [error]);
 
   return (

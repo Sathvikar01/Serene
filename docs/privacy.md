@@ -34,7 +34,7 @@ grant or revoke a caregiver scope for their own child only; a caregiver cannot
 grant themselves or widen a scope. Adversarial cross-child / caregiver /
 service-role / evaluation tests: `tests/test_rls.py`.
 
-## 3. Privacy-safe observability (implemented, #52 partial)
+## 3. Privacy-safe observability (implemented, #52)
 
 All telemetry passes through `serene.observability.SafeTelemetry`:
 
@@ -66,16 +66,29 @@ ingest limit, caps pending spans, and reports failures as codes (`HTTP_403`,
 - Model provenance records provider/model/prompt version, never prompts or
   private reasoning.
 
-## 5. Secrets and logging audit (#59 partial)
+## 5. Secrets and logging audit (#59)
 
-- `.env.example` documents every variable read by `serene/`, `scripts/`,
-  `eval/` with empty secret values (tested).
+- `.env.example` documents the variables read by `serene/`, `scripts/`,
+  `eval/`, Telegram ingress and the web build, with empty secret values (tested).
 - `scripts/secret_scan.py` scans tracked and untracked files for credential
   formats and personal email addresses; it runs in CI and in the test suite.
 - Hermes keeps its own secrets in `HERMES_HOME/.env`; cfo.ai uses browser OAuth;
   Entire uses `entire login`. None of these credentials touch the repository.
 - Entire is configured with `push_sessions: false` because this repository is
   public: agent session transcripts are not pushed unless a human opts in.
+- Frontend error boundaries emit fixed rendering-failure codes. They never log
+  the supplied Error object, message, stack or digest. Component tests inject a
+  private narrative in all three fields and verify it reaches neither console
+  output nor the page, while retry still works.
+- The Maya E2E privacy test denies socket connections, runs the entire fixture,
+  checks example.org-only external sources and verifies that raw narratives and
+  the original child id do not reach the telemetry sink.
+
+Audit commands, results, scope and limitations are in
+[privacy-audit.md](privacy-audit.md). The demo JSON/HTML intentionally contains
+**synthetic** narratives as judging evidence. Raw evidence in the authenticated
+domain ledger is not a telemetry log; no real family record belongs in demo,
+test, eval, public artifacts or screenshots.
 
 ## 6. Non-goals
 
