@@ -24,6 +24,18 @@ InvestigationService (phase machine, ledger-guarded)
   → EVALUATING (Hermes) → COMPLETE | NEEDS_EVIDENCE | NEEDS_APPROVAL | PARKED_UNRESOLVED
 ```
 
+Code, not the planner, decides when the investigation is complete
+(`serene/investigation/sufficiency.py`). Two hypotheses count as told apart once a
+request that predicted them differently gets a decisive outcome: a parent's YES/NO, or
+VERIFIED external evidence. Predictions are recorded with the request, before its
+outcome. EVALUATING completes when every live hypothesis has been told apart from a
+competitor and every live pair has been told apart. Otherwise it makes one more
+admissible request within the evidence budget, or it parks. The following never
+complete an investigation: UNSURE, silence, rejected evidence, an empty plan, or an
+exhausted budget. A hypothesis that enters later has not been told apart from anything,
+so it reopens the question. COMPLETE keeps the competing hypotheses: it means further
+evidence is not useful, not that a cause was found.
+
 ## Components
 
 | Piece | Module | Authority |
@@ -34,6 +46,7 @@ InvestigationService (phase machine, ledger-guarded)
 | Kernel boundary | `serene/investigation/boundary.py` | stamps the AGENT actor; ledger admission decides |
 | Context retrieval (EXPERIENCE / MEMORY / BELIEF) | `serene/investigation/context.py` | read-only; unverified/rejected evidence withheld |
 | Minimum Sufficient Childhood Data | `serene/investigation/minimum_data.py` | deterministic selection of ≤1 observation |
+| Evidence sufficiency | `serene/investigation/sufficiency.py` | the only way to COMPLETE; ledger facts only |
 | Investigation controller | `serene/investigation/service.py` | phase moves are events admission re-checks |
 | Ingestion | `serene/evidence/ingestion.py` | raw first, structured second |
 | Bounded browser | `serene/adapters/browser/hermes_browser.py` | acquires UNVERIFIED evidence only |
@@ -110,6 +123,8 @@ Without a fetcher the verifier fails closed (`REFETCH_UNAVAILABLE`).
 | Browse while the model runtime refuses service (AUTH/REFUSED/PROTOCOL) | `UNAVAILABLE`, not retried | `retryable=false` |
 | Verifier error / unsupported page | evidence REJECTED; never used | `EVIDENCE_REJECTED` |
 | Planner unavailable | PARKED_UNRESOLVED (never "sufficient") | `PLANNER_UNAVAILABLE` |
+| Planner proposes nothing admissible before the hypotheses are told apart | PARKED_UNRESOLVED (an empty plan never completes) | `NO_ADMISSIBLE_EVIDENCE` |
+| Planner keeps proposing after they are told apart | COMPLETE; checked before the planner is asked | `EVIDENCE_SUFFICIENT` |
 | Parent silent past 48 h | PARKED_UNRESOLVED | `PARENT_NO_RESPONSE` |
 | Process restart | state rebuilt from the ledger; budgets counted from events, never reset; open browse resumes, answered requests are never re-dispatched | replay |
 

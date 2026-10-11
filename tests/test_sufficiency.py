@@ -14,11 +14,10 @@ from collections.abc import Callable
 from datetime import timedelta
 from typing import Any
 
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from eval.scenarios.runtime_scenarios import open_investigation, pickup_policy, snack_question
-from serene.domain.entities import InvestigationPhase as P
 from serene.investigation.sufficiency import covers, split_by
 from tests.evidence_support import FakeFetcher, browse_reply, evidence_factory
 from tests.investigation_support import no_change_reply, plan_reply
@@ -190,6 +189,7 @@ requests = st.lists(
 )
 
 
+@settings(max_examples=200, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(live=st.sets(hyp_ids, max_size=4), history=requests, noise=requests)
 def test_only_decisive_splits_decide_and_no_suggestion_can_flip_it(
     live: set[str], history: list[Any], noise: list[Any]
@@ -211,4 +211,3 @@ def test_only_decisive_splits_decide_and_no_suggestion_can_flip_it(
     if result:
         assert all(frozenset((x, y)) in pairs for x in live for y in live if x != y)
         assert all(any(h in pair for pair in pairs) for h in live)
-
