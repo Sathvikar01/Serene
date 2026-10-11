@@ -23,10 +23,29 @@ Cost is consulted only between candidates equal on 1-5, so it can never outrank
 safety, need or value. No numeric information gain is computed or emitted.
 Candidates re-asking fields already requested in this investigation are
 excluded, so the policy never asks the same thing twice.
+
+Evidence units. Code, not the planner, decides how much one request asks for: the
+smallest piece of evidence that can be verified on its own.
+
+    BROWSE      one requested field per unit. The verifier needs every requested
+                field stated in ONE capture excerpt, and nothing known before the
+                capture shows that two fields sit in the same passage, so no fields
+                are grouped. A suggestion naming several fields becomes one unit per
+                field, in the planner's order; each keeps the suggestion's bounds and
+                predictions, which only rank (BROWSE predictions are never scored as
+                confirmed or contradicted).
+    ASK_PARENT  one YES/NO answer is one unit, so it records one field: the first
+                requested field the question itself names (`names_field`). A
+                question that names none of its fields is not asking for its own
+                observation and is excluded (QUESTION_NOT_ALIGNED).
+
+Units are ranked like any candidate; a unit whose field was already requested is
+REDUNDANT, so each round asks for one field not yet asked.
 """
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Annotated, Final, Protocol, Self, runtime_checkable
@@ -48,12 +67,16 @@ from serene.policies.external_evidence import domain_allowed
 from serene.policies.safety import classify_intervention
 from serene.ports.cost import CostModel
 
-POLICY_VERSION: Final = "minimum-sufficient-data/1"
+POLICY_VERSION: Final = "minimum-sufficient-data/2"
 CandidateId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9_\-]{1,64}$")]
 
 _VALUE_RANK: Final = {InformationValue.HIGH: 0, InformationValue.MEDIUM: 1, InformationValue.LOW: 2}
 _BURDEN_RANK: Final = {AcquisitionMode.BROWSE: 0, AcquisitionMode.ASK_PARENT: 1}
 _LATENCY_RANK: Final = {AcquisitionMode.BROWSE: 0, AcquisitionMode.ASK_PARENT: 1}
+_WORD: Final = re.compile(r"[a-z0-9]+")
+_STEM_MIN: Final = 4  # shorter tokens must match a whole word
+_STEM_SLACK: Final = 3  # "calm" ~ "calmer", "transition" ~ "transitions"
+_NOT_SUFFICIENCY: Final = frozenset({"QUESTION_NOT_ALIGNED"})
 
 
 class EvidenceCandidate(KernelModel):
@@ -76,6 +99,35 @@ class EvidenceCandidate(KernelModel):
         elif not self.allowed_domains or self.subject is None or self.question is not None:
             raise ValueError("BROWSE needs a subject and allowed domains, and no question")
         return self
+
+
+def _same_word(token: str, word: str) -> bool:
+    if token == word:
+        return True
+    short, long = sorted((token, word), key=len)
+    return (
+        len(short) >= _STEM_MIN and long.startswith(short) and len(long) - len(short) <= _STEM_SLACK
+    )
+
+
+def names_field(question: str, field: str) -> bool:
+    """Whether a question names a requested field: at least half of the field's word
+    tokens appear in the question (a whole word, or the same stem). A lexical check
+    on the system's own tag, never on scenario vocabulary; necessary, not sufficient."""
+    tokens = _WORD.findall(field.casefold())
+    words = _WORD.findall(question.casefold())
+    hits = sum(1 for t in tokens if any(_same_word(t, w) for w in words))
+    return bool(tokens) and 2 * hits >= len(tokens)
+
+
+def evidence_units(candidate: EvidenceCandidate) -> tuple[EvidenceCandidate, ...]:
+    """The smallest independently verifiable requests in a suggestion (module doc).
+    Empty when none is admissible (an ASK_PARENT question naming none of its fields)."""
+    fields = tuple(dict.fromkeys(candidate.requested_fields))
+    if candidate.acquisition_mode is AcquisitionMode.ASK_PARENT:
+        question = candidate.question or ""
+        fields = tuple(f for f in fields if names_field(question, f))[:1]
+    return tuple(candidate.model_copy(update={"requested_fields": (f,)}) for f in fields)
 
 
 @runtime_checkable
@@ -109,7 +161,9 @@ class ScoredCandidate:
 
 @dataclass(frozen=True, slots=True)
 class Selection:
-    """The single chosen candidate (or None == sufficient) and why the rest lost."""
+    """The single chosen candidate and why the rest lost. No choice means sufficient,
+    unless a suggestion was refused for its form: a badly formed question is not
+    evidence that nothing more is needed, so it can never complete an investigation."""
 
     chosen: ScoredCandidate | None
     ranked: tuple[ScoredCandidate, ...]
@@ -118,7 +172,9 @@ class Selection:
 
     @property
     def sufficient(self) -> bool:
-        return self.chosen is None
+        return self.chosen is None and not any(
+            reason in _NOT_SUFFICIENCY for _, reason in self.excluded
+        )
 
 
 class MinimumDataPolicy:
@@ -185,16 +241,24 @@ class MinimumDataPolicy:
                 excluded.append((candidate.candidate_id, "DUPLICATE_CANDIDATE"))
                 continue
             seen.add(candidate.candidate_id)
-            if set(candidate.requested_fields) <= context.requested_fields_so_far:
-                excluded.append((candidate.candidate_id, "REDUNDANT_FIELDS"))
-                continue
-            scored = self.score(candidate, context)
-            if scored.safety is AcquisitionSafety.UNSAFE:
-                excluded.append((candidate.candidate_id, "UNSAFE"))
-            elif scored.information_value is InformationValue.LOW:
-                excluded.append((candidate.candidate_id, "LOW_VALUE"))
-            else:
-                eligible.append(scored)
+            units = evidence_units(candidate)
+            if not units:
+                excluded.append((candidate.candidate_id, "QUESTION_NOT_ALIGNED"))
+            for unit in units:
+                label = candidate.candidate_id
+                if len(candidate.requested_fields) > 1:
+                    label = f"{label}[{unit.requested_fields[0]}]"
+                if set(unit.requested_fields) <= context.requested_fields_so_far:
+                    excluded.append((label, "REDUNDANT_FIELDS"))
+                    continue
+                scored = self.score(unit, context)
+                if scored.safety is AcquisitionSafety.UNSAFE:
+                    excluded.append((label, "UNSAFE"))
+                elif scored.information_value is InformationValue.LOW:
+                    excluded.append((label, "LOW_VALUE"))
+                else:
+                    eligible.append(scored)
+        # Units of one suggestion tie on every key; the stable sort keeps field order.
         ranked = tuple(sorted(eligible, key=ScoredCandidate.key))
         return Selection(
             chosen=ranked[0] if ranked else None, ranked=ranked, excluded=tuple(excluded)

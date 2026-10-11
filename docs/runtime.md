@@ -79,6 +79,15 @@ MEDIUM = one predicts, LOW = never asked), then lexicographic priority
 `safety > evidence need > value > burden > latency > cost > id`. Cost cannot
 outrank safety, need or value. Already-requested fields are never asked again.
 
+**Evidence units.** Code, not the model, decides how much one request asks for: the
+smallest piece of evidence that verifies on its own. A BROWSE suggestion naming
+several fields becomes one unit per field (the verifier needs every requested field
+in one capture excerpt, and nothing before the capture shows two fields share one
+passage, so fields are never grouped). An ASK_PARENT unit records the one requested
+field its YES/NO question names; a question naming none of its fields is excluded
+(`QUESTION_NOT_ALIGNED`), and such an exclusion never counts as "sufficient": if
+nothing admissible remains the investigation parks (`NO_ADMISSIBLE_EVIDENCE`).
+
 **Browser bounds** come from the ledger's `EVIDENCE_REQUESTED`, never the model.
 After the Hermes run the adapter audits every executed tool call: only
 `web_search`, `web_extract`, `browser_navigate`, `browser_snapshot`,

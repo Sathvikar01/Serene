@@ -11,8 +11,9 @@ guards, so a refused transition leaves the investigation where it was.
     FORMING_HYPOTHESES model proposes patterns + competing hypotheses;
                        >= 2 admitted                                  -> NEEDS_EVIDENCE
     NEEDS_EVIDENCE     planner suggests; MinimumDataPolicy picks at most
-                       one missing observation, or none (sufficient) -> ASKING_HUMAN |
+                       one evidence unit, or none (sufficient)       -> ASKING_HUMAN |
                                                                         RESEARCHING | EVALUATING
+                       (none admissible, e.g. only misaligned questions, parks)
     ASKING_HUMAN       one YES/NO/UNSURE question; answered           -> VERIFYING
     RESEARCHING        bounded browser, retries counted in the ledger -> VERIFYING |
                                                                         NEEDS_EVIDENCE (exhausted)
@@ -311,6 +312,8 @@ class InvestigationService:
         if selection is None:
             return self._park(child, inv, _P.NEEDS_EVIDENCE, "PLANNER_UNAVAILABLE")
         if selection.chosen is None:
+            if not selection.sufficient:
+                return self._park(child, inv, _P.NEEDS_EVIDENCE, "NO_ADMISSIBLE_EVIDENCE")
             return self._move(child, inv, _P.NEEDS_EVIDENCE, _P.EVALUATING, "EVIDENCE_SUFFICIENT")
         candidate = selection.chosen.candidate
         request_id = self._new_id("erq")
@@ -341,6 +344,7 @@ class InvestigationService:
                 "request_id": request_id,
                 "acquisition_mode": candidate.acquisition_mode.value,
                 "information_value": selection.chosen.information_value.value,
+                "count": len(candidate.requested_fields),
             },
         )
         if candidate.acquisition_mode is AcquisitionMode.ASK_PARENT:
@@ -443,6 +447,8 @@ class InvestigationService:
                 "EVIDENCE_SUFFICIENT",
                 "COMPETING_HYPOTHESES_RETAINED",
             )
+        if selection.chosen is None:
+            return self._park(child, inv, _P.EVALUATING, "NO_ADMISSIBLE_EVIDENCE")
         if len(fresh.investigation_requests.get(inv, [])) >= self._budget.max_evidence_rounds:
             return self._park(child, inv, _P.EVALUATING, "EVIDENCE_BUDGET_EXHAUSTED")
         return self._move(child, inv, _P.EVALUATING, _P.NEEDS_EVIDENCE, "MORE_EVIDENCE_USEFUL")
@@ -535,7 +541,13 @@ class InvestigationService:
                 "child_id": child,
                 "investigation_id": inv,
                 "candidate_count": len(candidates),
-                "decision": "SUFFICIENT" if chosen is None else "SELECTED",
+                "decision": (
+                    "SELECTED"
+                    if chosen is not None
+                    else "SUFFICIENT"
+                    if selection.sufficient
+                    else "NONE_ADMISSIBLE"
+                ),
                 "information_value": "" if chosen is None else chosen.information_value.value,
                 "acquisition_mode": (
                     "" if chosen is None else chosen.candidate.acquisition_mode.value

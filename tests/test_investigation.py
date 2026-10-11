@@ -595,11 +595,12 @@ def _ctx_with_two_hypotheses() -> tuple[Any, list[str]]:
 def _ask(
     cid: str, predictions: dict[str, str], fields: tuple[str, ...] = ("f",)
 ) -> EvidenceCandidate:
+    fields = fields or (cid.replace("-", "_"),)
     return EvidenceCandidate(
         candidate_id=cid,
-        requested_fields=fields or (cid.replace("-", "_"),),
+        requested_fields=fields,
         acquisition_mode=AcquisitionMode.ASK_PARENT,
-        question=f"question {cid}?",
+        question=f"question {cid}: {' '.join(fields).replace('_', ' ')}?",
         rationale="r",
         predictions=tuple(
             HypothesisPrediction(hypothesis_id=h, expected=PredictedAnswer(v))
