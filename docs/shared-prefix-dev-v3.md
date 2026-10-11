@@ -1,6 +1,7 @@
 # Sampling-controlled DEV protocol: live-gate/3
 
-Status: eval-only protocol candidate, with deterministic verification. No live
+Status: eval-only protocol with a separately frozen sampling/decision contract in
+[`shared-prefix-dev-v3-decision.md`](shared-prefix-dev-v3-decision.md). No live
 experiment or holdout is authorized by this document. PR #67's product code is
 unchanged. Its historical 36-run DEV experiment remains **FAIL** permanently.
 This version does not reinterpret or overwrite that decision or
@@ -27,7 +28,8 @@ Two source tapes from the same historical repetition are not paired measurements
 of one original model sample. Reusing a tape or repeating its suffix does not create
 independent upstream replicates. Report every tape and downstream repetition,
 raw values, descriptive medians and categorical counts/rates; no significance
-claims. Any future suffix repetition count/order must be frozen before results.
+claims. The fresh experiment freezes one suffix per divergent arm/tape in the
+separate experiment manifest, before results.
 
 ## Freeze and identity checks
 
@@ -106,15 +108,15 @@ catalog, worktree or source tape refuses replay. Missing metadata is an error.
 The CLI intentionally supports only offline freeze/replay. A future explicitly
 authorized live experiment can use `FrozenContinuation` + `continue_pair` with
 the existing Hermes provider and NeatLogs path. No credentials are serialized.
-Freeze provider/model/config-file digest, timeout/retry settings, budget and
-telemetry path in a new experiment manifest **before replay**. The provider is
+Provider/model/config-file digest, timeout/retry settings, budget and
+telemetry path are pinned in the separate experiment manifest **before replay**. The provider is
 one object shared by both arms, receives only its own pending model request
 (never an arm label), and must revalidate the frozen configuration before every
 call. Workers retain the same already-spent virtual prefix budget; budgets are
 not reset at divergence. A provider or telemetry adapter must record every live
 attempt independently, including infrastructure failures; never rerun an
-unfavorable suffix. Continuation order is round-robin A then B at each next call,
-skipping a terminated arm. There is no live CLI flag to enable accidentally.
+unfavorable suffix. Continuation completes A's entire suffix, then B's entire
+suffix, once each per tape in catalog order. There is no live CLI flag to enable accidentally.
 
 Live continuation cannot access the source-tape queue. Each reply is bound to
 its own input before dispatch, copied into an append-only separate journal, and
@@ -139,9 +141,9 @@ remain unnecessary. Null capture denominators stay null. Virtual replay resource
 use and actual downstream provider calls must be reported separately.
 
 No fresh evaluation decision has been made. Prefix-only replay cannot establish
-DEV PASS or holdout eligibility. A future live suffix run must separately freeze
-its replication and decision rule before scores; mixed/inconclusive results stop
-without tuning or holdout. Neither a future pass nor this protocol changes the
+DEV PASS or holdout eligibility. The committed experiment manifest freezes the
+fresh run's sample/configuration/decision rule. Its completed decision is PASS or
+FAIL; invalid protocol/infrastructure state is INVALID/STOP. Neither a future pass nor this protocol changes the
 historical FAIL. Holdout still requires explicit approval.
 
 ## Commands and permanent historical record
@@ -186,5 +188,6 @@ with hashes retained in the committed verification record. Full pytest passed
 continuation-boundary guard added after full-suite collection. All 20 scripted
 Inspect samples, lint, formatting, types, ledger/secret checks and web build/type
 checks passed. Web E2E passed 29 tests with one existing skip after installing
-the missing pinned Chromium binary. The protocol is ready to freeze; a future
-live evaluation still needs a separately frozen sampling/decision manifest.
+the missing pinned Chromium binary. That record describes the initial protocol
+commit. The separate sampling/decision manifest now freezes the fresh evaluation;
+it does not rewrite this historical offline verification or authorize live calls.
