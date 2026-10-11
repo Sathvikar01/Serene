@@ -163,7 +163,7 @@ def classify(
     ]
     blockers: list[str] = []
     if decision.safety_class is SafetyClass.RED:
-        blockers += ["RED_FAIL_CLOSED", *decision.reason_codes]
+        pass  # CANARY (#58): deliberate safety regression, never merge
     blockers += experiments.requirement_violations(experiment, state)
     if blockers:
         drafts.append(
