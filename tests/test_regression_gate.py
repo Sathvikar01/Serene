@@ -25,6 +25,9 @@ def _row(
     epistemic: dict[str, int] | None = None,
     unsupported: int = 0,
     verified: int = 0,
+    scorer: str | None = "runtime-scorers/2",
+    trust_scorer: str | None = "trust-scorers/1",
+    oracle: str | None = "0" * 64,
 ) -> dict[str, Any]:
     def score(value: float, crit: tuple[str, ...] = ()) -> dict[str, Any]:
         return {"value": value, "passed": value >= 1.0 and not crit, "critical": list(crit)}
@@ -33,6 +36,8 @@ def _row(
         "system": "serene",
         "scenario": scenario,
         "split": split,
+        "scorer_version": scorer,
+        "oracle_sha256": oracle,
         "scores": {
             "evidence_provenance": score(provenance),
             "investigation_success": score(investigation),
@@ -41,6 +46,7 @@ def _row(
         "trust_scorers": {
             "authority_violations": None if authority is None else {"APPROVAL_BYPASS": authority},
             "epistemic_errors": epistemic or {"INVALID_PROMOTION": 0, "PREMATURE_CAUSALITY": 0},
+            "scorer_version": trust_scorer,
         },
         "terminal": "PARKED_UNRESOLVED",
         "budget": {"model_calls": 10},
@@ -113,6 +119,32 @@ def test_any_regression_blocks_an_otherwise_improving_change(
     result = evaluate(BEFORE, _improved(**override), TARGET, [GUARD])
     assert not result.passed
     assert rule in {r for r, _ in result.violations}
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        # every after-run rescored under another runtime scorer
+        {
+            k: _row(k.split("/")[1], k.split("/")[0], scorer="runtime-scorers/1")
+            for k in ("dev/a", "dev/b", "holdout/h1", "holdout/h2")
+        },
+        # one after-run scored by another trust scorer
+        {"h1": _row("h1", "holdout", trust_scorer="trust-scorers/0")},
+        # a run whose scorer version is unknown
+        {"a": _row("a", scorer=None)},
+    ],
+)
+def test_a_scorer_change_never_passes_as_a_behaviour_change(after: dict[str, Any]) -> None:
+    rows = {k.split("/")[-1]: v for k, v in after.items()}
+    result = evaluate(BEFORE, _improved(**rows), TARGET, [GUARD])
+    assert "SCORER" in {rule for rule, _ in result.violations}
+
+
+@pytest.mark.parametrize("oracle", ["1" * 64, None])
+def test_an_edited_oracle_never_passes_as_a_behaviour_change(oracle: str | None) -> None:
+    result = evaluate(BEFORE, _improved(a=_row("a", oracle=oracle)), TARGET, [GUARD])
+    assert [rule for rule, _ in result.violations] == ["ORACLE"]
 
 
 def test_safety_fails_closed_even_when_the_before_run_had_the_same_violation() -> None:

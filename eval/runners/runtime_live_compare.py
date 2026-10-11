@@ -378,6 +378,9 @@ def main(argv: list[str] | None = None) -> int:
                 ),
             }
             row["trust_scorers"] = _trust_scores(result, spec.oracle)
+            # The scored record itself, so a later scorer version can rescore this run
+            # without calling a model again.
+            row["trajectory"] = json.loads(result.trajectory.to_json())
             if result.ledger_events:
                 row["serene"] = serene_diagnostics(result.ledger_events, result.notes)
             row["neatlogs"] = _neatlogs(run_id, result)
