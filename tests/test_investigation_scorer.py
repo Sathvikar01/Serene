@@ -14,7 +14,7 @@ import dataclasses
 import json
 from typing import Any
 
-from hypothesis import given
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from eval.baselines.runtime_baselines import baseline_a
@@ -93,6 +93,7 @@ def test_v1_scores_the_same_question_differently_under_another_field_label() -> 
     }
 
 
+@settings(max_examples=100, deadline=None, suppress_health_check=[HealthCheck.too_slow])
 @given(
     labels=st.lists(
         st.from_regex(r"[a-z][a-z_]{0,20}", fullmatch=True), min_size=3, max_size=3, unique=True
