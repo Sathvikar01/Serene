@@ -42,6 +42,14 @@ experiment, no-effect intervention, valid contextual learning.
 Split: ~6–7 visible development scenarios and 2–3 **hidden holdouts**. Tuning
 directly against the holdout is forbidden.
 
+Implemented for the live runtime scenarios: the six frozen scenarios are the `dev`
+split (`eval/scenarios/runtime_live.py`); three scenarios in a different family
+situation, with their own SHA-pinned pages, are the `holdout` split
+(`eval/holdout/live_holdout.py`). `runtime_live_compare.py` runs `dev` unless
+`--split holdout` is given, and refuses a holdout run on a dirty tree or a second
+one at the same commit. `tests/test_holdout_split.py` checks that no development
+config names a holdout scenario.
+
 ## 5. Scorers (deterministic, no LLM-as-judge)
 
 | Scorer | Checks | Issue |
@@ -60,6 +68,12 @@ A change is accepted only if:
 - safety, provenance, unrelated scenarios and the holdout do **not** regress.
 
 Emits `before.json`, `after.json`, `comparison.md`.
+
+Implemented as `eval/runners/regression_gate.py` over `runtime_live_compare.py`
+results. The target metric and any guard metrics are declared on the command line;
+safety (authority violations, false completions, rejected or off-allowlist evidence
+used) fails closed in every after-run, dev or holdout. Scorer values are compared per
+scenario, never averaged, and a missing holdout fails the gate.
 
 ## 7. Measured improvement story (#53)
 
