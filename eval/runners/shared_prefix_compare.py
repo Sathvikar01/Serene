@@ -16,7 +16,7 @@ import sys
 import threading
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from eval.runners.shared_prefix_protocol import (
     DEV_IDS,
@@ -251,14 +251,23 @@ class FrozenContinuation:
         self.check()
         return self._provider(request)
 
+    def begin_arm(self, arm: str) -> None:
+        require(arm in {"A", "B"}, "UNKNOWN_ARM")
+
+
+class ContinuationProvider(Protocol):
+    def begin_arm(self, arm: str) -> None: ...
+
+    def respond(self, request: dict[str, Any]) -> dict[str, Any]: ...
+
 
 def continue_pair(
     workers: Mapping[str, Any],
     pending: Mapping[str, Any],
     prefix: SharedPrefix,
-    provider: FrozenContinuation,
+    provider: ContinuationProvider,
 ) -> tuple[dict[str, Any], ContinuationJournal]:
-    """Optional API: round-robin LIVE suffix, never sends a tape reply downstream.
+    """Optional API: complete A's LIVE suffix, then B's; never replay downstream.
 
     Caller persists provider.metadata before replay; config is rechecked per call.
     The same provider is called for each arm's own exact pending input.
@@ -273,8 +282,9 @@ def continue_pair(
             "CONTINUATION_BOUNDARY_CHANGED",
         )
     states = dict(pending)
-    while any(s.get("request") is not None for s in states.values()):
-        for arm in ("A", "B"):
+    for arm in ("A", "B"):
+        provider.begin_arm(arm)
+        while states[arm].get("request") is not None:
             request = states[arm].get("request")
             if request is None:
                 continue

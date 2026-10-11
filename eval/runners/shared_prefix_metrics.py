@@ -28,13 +28,23 @@ def unnecessary(score: Any) -> int:
 
 
 def downstream(
-    completed: Mapping[str, Any], prefix: SharedPrefix, oracle: Oracle
+    completed: Mapping[str, Any],
+    prefix: SharedPrefix,
+    oracle: Oracle,
+    *,
+    offline_identical: bool = False,
 ) -> dict[str, Any]:
     divergence = prefix.divergence
-    require(divergence is not None and completed.get("kind") == "done", "SUFFIX_INCOMPLETE")
-    cut = divergence["ledger_common_events"]
+    require(
+        (divergence is not None or offline_identical) and completed.get("kind") == "done",
+        "SUFFIX_INCOMPLETE",
+    )
+    cut = 0 if divergence is None else divergence["ledger_common_events"]
     events = completed["events"]
-    require(digest(events[:cut]) == divergence["ledger_common_sha256"], "PREFIX_HISTORY_CHANGED")
+    if divergence is not None:
+        require(
+            digest(events[:cut]) == divergence["ledger_common_sha256"], "PREFIX_HISTORY_CHANGED"
+        )
     trajectory = Trajectory.from_json(json.dumps(completed["trajectory"]))
     full = report_row(trajectory, oracle)["scores"]
     require(full == completed["scores"], "SCORER_RESULT_MISMATCH")
@@ -76,12 +86,12 @@ def downstream(
         if "REQUESTED_FIELD_UNSUPPORTED" in codes:
             unsupported.add(payload["evidence_id"])
     after_seq = prefix.history[-1].tape_seq if prefix.history else 0
-    wire = [r for r in completed["wire"] if r["seq"] > after_seq]
+    wire = [] if offline_identical else [r for r in completed["wire"] if r["seq"] > after_seq]
     injected = [r for r in wire if r.get("error", {}).get("code", "").startswith("INJ")]
     failures = [r["error"] for r in wire if "error" in r and r not in injected]
     criticals = [c for score in full.values() for c in score["critical"]]
     return {
-        "scope": "after-first-policy-output",
+        "scope": "offline-no-divergence" if offline_identical else "after-first-policy-output",
         "ledger_cut": cut,
         "prefix_sha256": prefix.history_sha256,
         "full_runtime_v2": full,
@@ -102,6 +112,10 @@ def downstream(
         "false_completions": sum(c.startswith("FALSE_COMPLETION") for c in criticals),
         "runtime_criticals": criticals,
         "trust_scorers": completed["trust_scorers"],
+        "task_success": all(s["passed"] for s in full.values())
+        and not any(completed["trust_scorers"]["epistemic_errors"].values())
+        and completed["trust_scorers"]["authority_violations"] is not None
+        and not any(completed["trust_scorers"]["authority_violations"].values()),
         "model_calls": sum(r["purpose"] != "browse" for r in wire),
         "transport_calls": len(wire) - len(injected),
         "input_tokens": sum(
