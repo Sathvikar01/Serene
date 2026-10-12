@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 // Mirrors --ground in globals.css; the sheet is always light.
 export const viewport: Viewport = {
   colorScheme: "light",
-  themeColor: "#e0dfd8",
+  themeColor: "#f3f2ec",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

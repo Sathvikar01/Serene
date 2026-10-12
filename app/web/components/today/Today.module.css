@@ -11,11 +11,18 @@
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "attention" "focus" "side";
   gap: var(--space-6);
   align-items: start;
 }
 
+.attention {
+  grid-area: attention;
+  min-width: 0;
+}
+
 .focus {
+  grid-area: focus;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -23,6 +30,7 @@
 }
 
 .side {
+  grid-area: side;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -32,12 +40,9 @@
 @media (min-width: 64rem) {
   .layout {
     grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
-    gap: var(--space-6);
-  }
-
-  .side {
-    position: sticky;
-    top: calc(var(--topbar-height) + var(--space-4));
+    grid-template-areas: "focus attention" "focus side";
+    grid-template-rows: auto 1fr;
+    gap: var(--space-4) var(--space-6);
   }
 }
 

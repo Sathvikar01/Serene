@@ -45,13 +45,14 @@ test("Today shows every element of the current investigation, cleanly", async ({
   const workflow = page.locator('[data-block="workflow"]');
   await expect(workflow.getByRole("status")).toContainText("Waiting for you");
   await expect(workflow.locator("[data-workflow-sequence]")).toHaveCount(first.phase_history.length);
-  await expect(workflow.locator("[data-workflow-sequence]").first()).toBeVisible();
-  // The default is expanded; keyboard users can collapse and reopen the history.
+  await expect(workflow.locator("[data-workflow-sequence]").first()).not.toBeVisible();
+  // Today keeps its summary short; keyboard users can open and close the history.
   await workflow.getByText("Steps Serene actually took", { exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(workflow.locator("[data-workflow-sequence]").first()).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(workflow.locator("[data-workflow-sequence]").first()).not.toBeVisible();
   await page.keyboard.press("Enter");
-  await expect(workflow.locator("[data-workflow-sequence]").first()).toBeVisible();
   await workflow.screenshot({ path: testInfo.outputPath("recorded-workflow.png") });
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(0);
   expect(errors).toEqual([]);

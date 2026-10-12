@@ -1,3 +1,4 @@
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
 import { useId, type ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { LineMark, type Certainty } from "@/components/notation/LineMark";
@@ -51,12 +52,7 @@ export function MemoryView({ source, retry }: MemoryViewProps) {
       );
     case "loading":
       return (
-        <div className={styles.loading} role="status">
-          <span className="visually-hidden">Loading memory</span>
-          <LineMark certainty="unknown" />
-          <LineMark certainty="unknown" />
-          <LineMark certainty="unknown" />
-        </div>
+        <SurfaceLoading label="Loading memory" compact />
       );
     case "error":
       return (

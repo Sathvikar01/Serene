@@ -5,7 +5,6 @@ import { Page } from "@/components/layout/Page";
 import { LineKey, type LineKeyEntry } from "@/components/notation/LineKey";
 import { RecordControl } from "@/components/session/RecordControl";
 import { DemoInvestigations } from "@/components/demo/DemoInvestigations";
-import { DemoNotice } from "@/components/demo/DemoNotice";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -35,12 +34,11 @@ export default function TodayPage() {
       title="Today"
       question="What matters now?"
       lead="What Serene is working on, what it doesn’t know yet, and what it would do next, each with how sure it is."
-      status={<RecordControl next="/today" />}
+      status={demo ? null : <RecordControl next="/today" />}
     >
       {/* The current investigation, from the `investigations` projection over the
           Realtime projection path (#33), for the signed-in parent's chosen child
           (#87). Signed out, unconfigured or with no child, Today stays honestly empty. */}
-      {demo ? <DemoNotice /> : null}
       {demo ? (
         <DemoInvestigations mode="today" />
       ) : (

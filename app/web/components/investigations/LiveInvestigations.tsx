@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
 import { useFamilyRecord } from "@/components/session/FamilyRecord";
 import { InvestigationSurface } from "./InvestigationSurface";
 
@@ -17,6 +18,9 @@ type Props = {
 // one child's record is ever shown under another's.
 export function LiveInvestigations({ mode, unconnected }: Props) {
   const record = useFamilyRecord();
+  if (record.status === "loading" || (record.status === "signed-in" && record.children.status === "loading")) {
+    return <SurfaceLoading label="Loading your family’s record" compact />;
+  }
   if (record.live) {
     return (
       <InvestigationSurface

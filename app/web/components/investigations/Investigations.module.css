@@ -17,15 +17,6 @@
   list-style: none;
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  max-width: 40rem;
-  padding: var(--space-6) 0;
-  color: var(--rule-strong);
-}
-
 /* The index of open questions, when there is more than one. */
 .index {
   display: flex;
@@ -43,7 +34,7 @@
 
 .indexList {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
   gap: var(--space-3);
   list-style: none;
 }
@@ -169,8 +160,6 @@
 
   .rail {
     grid-area: rail;
-    position: sticky;
-    top: calc(var(--topbar-height) + var(--space-4));
   }
 
   .main {
@@ -560,8 +549,6 @@
 
   .investigation[data-variant="brief"] .rail > .block {
     grid-area: unknown;
-    position: sticky;
-    top: calc(var(--topbar-height) + var(--space-4));
   }
 }
 

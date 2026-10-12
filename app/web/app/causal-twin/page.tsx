@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { CausalTwinSurface } from "@/components/causal-twin/CausalTwinSurface";
 import { LiveCausalTwin } from "@/components/causal-twin/LiveCausalTwin";
-import { DemoNotice } from "@/components/demo/DemoNotice";
 import { Page } from "@/components/layout/Page";
 import { RecordControl } from "@/components/session/RecordControl";
 import demoPayload from "@/fixtures/synthetic-causal-twin.json";
@@ -20,9 +19,8 @@ export default function CausalTwinPage() {
       question="Why does Serene believe what it believes?"
       lead="A map of what may influence what in your child’s days, drawn by how firmly each link is known. Choose any link to follow it down to the evidence."
       width="wide"
-      status={<RecordControl next="/causal-twin" />}
+      status={demo ? null : <RecordControl next="/causal-twin" />}
     >
-      {demo ? <DemoNotice /> : null}
       {demo ? <CausalTwinSurface source={twinSourceFrom(demoPayload)} /> : <LiveCausalTwin />}
     </Page>
   );

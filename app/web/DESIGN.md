@@ -2,8 +2,8 @@
 name: Serene
 description: A survey sheet for a family's questions, with a sage hellebore blooming out of it.
 colors:
-  warm-paper: "#e0dfd8"
-  paper-raised: "#eae9e3"
+  warm-paper: "#f3f2ec"
+  paper-raised: "#eeeee5"
   paper-sunken: "#d5d4cc"
   deep-olive: "#2e3d28"
   ink: "#1d2718"
@@ -15,7 +15,7 @@ colors:
   rule: "#c7c7bc"
   rule-strong: "#9da58c"
   selection: "#cbd5ae"
-  paper-lifted: "#f1f0eb"
+  paper-lifted: "#fbfaf6"
   paper-wash: "#e8ebdf"
   on-olive: "#eceee4"
   on-olive-strong: "#f4f5ee"
@@ -130,13 +130,13 @@ Three swatches (Warm Paper, Sage Green and Deep Olive), with tints derived from 
 - **Sage Deep** (#66784a): sage darkened to 3.6:1 on the ground, for marks that must be seen (empty-state lines, the accent token).
 
 ### Neutral
-- **Warm Paper** (#e0dfd8): the page ground. The sheet is always light; there is no dark mode.
-- **Paper Raised** (#eae9e3): content sheets that lie on the grid.
+- **Warm Paper** (#f3f2ec): the page ground. The sheet is always light; there is no dark mode.
+- **Paper Raised** (#eeeee5): content sheets that lie on the grid.
 - **Olive Muted** (#3b4734, 7.4:1) and **Olive Faint** (#4d5945, 5.6:1): secondary text.
 - **Rule** (#c7c7bc) and **Rule Strong** (#9da58c): dividers and sheet borders. The grid lines use deep olive at 5%, and the dots near-black olive at 22%.
 
 
-- **Paper Lifted** (#f1f0eb): working sheets, panels and cards laid on the grid. **Paper Wash** (#e8ebdf): a sage-washed paper for the one item a surface leads with.
+- **Paper Lifted** (#fbfaf6): working sheets, panels and cards laid on the grid. **Paper Wash** (#e8ebdf): a sage-washed paper for the one item a surface leads with.
 - **Deep Olive as a ground**: the one action a surface leads with ("What Serene will do next") is set in deep olive with On Olive text (#eceee4, #f4f5ee; #c9d3b1 for its label).
 
 ### Safety
@@ -216,3 +216,13 @@ Entering Serene: the glass, stems, bud, back flower and words fade (320ms); a co
 - **Don't** use sage for text on the light ground.
 - **Don't** add shadows beyond the two lifts, or cards inside cards.
 - **Don't** imply a state before the record holds it: no optimistic stages, no scores, no confidence percentages.
+
+## Website UX refresh
+
+Working surfaces use sentence-case titles at 1.75–2.5rem and a quieter ruled background. Navigation uses readable sentence-case labels with a sage fill for the current page. The mobile trigger includes a visible Menu label.
+
+Today presents the next action before the recorded workflow; the brief keeps workflow steps collapsed until requested. On narrow screens, Needs you precedes the investigation. Tall side rails and map explanations participate in the document scroll. Experiment section links and Back to top use native anchors with header clearance. Anchor scrolling stays immediate so rapid keyboard navigation through long evidence trails always reaches its target.
+
+Route and record loading share a gently breathing botanical mark, a visible task label and decorative skeleton sheets. Reduced motion disables the animations. Loading lasts only for the real navigation, session lookup or projection fetch. The landing entry becomes available early and the decorative exit takes 660ms (immediate with reduced motion).
+
+Populated preview routes keep their records and read-only actions without repeated demo-data notices or unrelated disconnected-family controls. Live routes keep the family controls and authenticated decision transport.

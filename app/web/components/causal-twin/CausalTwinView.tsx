@@ -1,5 +1,6 @@
 "use client";
 
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
 import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { LineKey, type LineKeyEntry } from "@/components/notation/LineKey";
@@ -53,11 +54,7 @@ export function CausalTwinView({ source, ...selection }: CausalTwinViewProps) {
       );
     case "loading":
       return (
-        <div className={styles.loading} role="status">
-          <span className="visually-hidden">Loading the Causal Twin</span>
-          <LineMark certainty="unknown" className={styles.loadingLine} />
-          <LineMark certainty="unknown" className={styles.loadingLine} />
-        </div>
+        <SurfaceLoading label="Loading the Causal Twin" compact />
       );
     case "error":
       return (

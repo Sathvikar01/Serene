@@ -10,6 +10,26 @@
   gap: var(--space-7);
 }
 
+.index {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.index a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--ground-lifted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+.index a:hover { border-color: var(--ink); background: var(--ground-wash); }
+.index span { font-weight: 600; }
+
 .group {
   display: flex;
   flex-direction: column;
@@ -42,15 +62,6 @@
   list-style: none;
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  max-width: 40rem;
-  padding: var(--space-6) 0;
-  color: var(--rule-strong);
-}
-
 .empty,
 .aside {
   font-size: var(--text-sm);
@@ -62,7 +73,7 @@
 
 .card {
   container-type: inline-size;
-  overflow: hidden;
+  overflow: clip;
   min-width: 0;
   border: 1px solid var(--rule);
   border-radius: var(--radius-lg);
@@ -212,7 +223,7 @@
 /* The four facts a parent weighs first. */
 .cells {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
   gap: var(--space-2);
   margin: 0;
 }

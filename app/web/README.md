@@ -10,8 +10,7 @@ privacy-safe `causal_twin` projection with the complete provenance of every link
 Without `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` every
 page renders no family data by default. Set `SERENE_DEMO_MODE=1` to fill the
 five primary surfaces with fictional, read-only examples from the validated
-synthetic fixtures. A notice labels demo data on each page; experiment approval
-actions remain disabled. The setting only affects the local app process.
+synthetic fixtures. Experiment approval actions remain disabled. The setting only affects the local app process.
 
 For a guided, fictional family example, open the [Maya pickup story](../../docs/maya-demo.md).
 It starts with a plain-language summary, then shows the recorded investigation

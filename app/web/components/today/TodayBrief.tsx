@@ -40,24 +40,7 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
     <div className={styles.today} data-investigations>
       {status}
       <div className={styles.layout}>
-        <div className={styles.focus}>
-          {current ? (
-            <InvestigationDetail investigation={current} headingLevel="h2" variant="brief" />
-          ) : (
-            <EmptyState title="No open investigations">
-              <p>Nothing is being looked into. An investigation opens when a concern has more than one plausible explanation.</p>
-            </EmptyState>
-          )}
-          {investigations.length > 1 && current ? (
-            <p>
-              <Onward href={`/investigations#${investigationAnchor(current.investigation_id)}`}>
-                See all {investigations.length} investigations
-              </Onward>
-            </p>
-          ) : null}
-        </div>
-
-        <div className={styles.side}>
+        <div className={styles.attention}>
           <Side title="Needs you" icon="hand" emphasis={needs > 0}>
             {needs === 0 ? (
               <p className={styles.quiet}>
@@ -90,7 +73,25 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
               <p className={styles.quiet}>Experiments could not be read here. Open Experiments to see them.</p>
             ) : null}
           </Side>
+        </div>
+        <div className={styles.focus}>
+          {current ? (
+            <InvestigationDetail investigation={current} headingLevel="h2" variant="brief" />
+          ) : (
+            <EmptyState title="No open investigations">
+              <p>Nothing is being looked into. An investigation opens when a concern has more than one plausible explanation.</p>
+            </EmptyState>
+          )}
+          {investigations.length > 1 && current ? (
+            <p>
+              <Onward href={`/investigations#${investigationAnchor(current.investigation_id)}`}>
+                See all {investigations.length} investigations
+              </Onward>
+            </p>
+          ) : null}
+        </div>
 
+        <div className={styles.side}>
           {childState ? (
             <Side title="What Serene holds" icon="memory">
               <p className={styles.quiet}>Recorded items for this child, by how far up the evidence ladder each stands.</p>

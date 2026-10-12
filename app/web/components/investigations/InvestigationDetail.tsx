@@ -99,8 +99,6 @@ export function InvestigationDetail({ investigation: inv, headingLevel: Heading 
         />
       </header>
 
-      <InvestigationWorkflow investigation={inv} headingLevel={Heading === "h2" ? "h3" : "h4"} />
-
       <div className={styles.workspace}>
         <div className={styles.rail}>
           <NextAction inv={inv} brief={brief} />
@@ -259,6 +257,7 @@ export function InvestigationDetail({ investigation: inv, headingLevel: Heading 
           </Block>
         </div>
       </div>
+      <InvestigationWorkflow investigation={inv} headingLevel={Heading === "h2" ? "h3" : "h4"} collapsed={brief} />
     </article>
   );
 }

@@ -33,6 +33,7 @@ export function MobileMenu() {
         type="button"
         className={styles.trigger}
         aria-haspopup="dialog"
+        aria-label="Surfaces"
         aria-expanded={open}
         aria-controls="surface-menu"
         onClick={() => {
@@ -45,7 +46,7 @@ export function MobileMenu() {
           <line x1="1" y1="7" x2="23" y2="7" />
           <line x1="1" y1="13" x2="23" y2="13" />
         </svg>
-        <span className="visually-hidden">Surfaces</span>
+        <span>Menu</span>
       </button>
 
       <dialog

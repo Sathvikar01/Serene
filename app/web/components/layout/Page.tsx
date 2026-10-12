@@ -25,7 +25,7 @@ type PageProps = {
 export function Page({ title, question, lead, width = "standard", status, children }: PageProps) {
   return (
     <div className={styles.page} data-width={width}>
-      <header className={styles.head}>
+      <header className={styles.head} data-has-status={status !== null || undefined}>
         <div className={styles.heading}>
           <h1 className={styles.title}>{title}</h1>
           {question ? <p className={styles.question}>{question}</p> : null}
@@ -36,9 +36,10 @@ export function Page({ title, question, lead, width = "standard", status, childr
       <div id="surface-body" className={styles.body}>
         {children}
       </div>
-      <p className={styles.colophon}>
-        Serene keeps reports, possible explanations and lessons learned separate.
-      </p>
+      <footer className={styles.footer}>
+        <p className={styles.colophon}>Serene keeps reports, possible explanations and lessons learned separate.</p>
+        <a href="#content" className={styles.backTop}>Back to top <span aria-hidden="true">↑</span></a>
+      </footer>
     </div>
   );
 }

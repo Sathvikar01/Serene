@@ -92,7 +92,8 @@
 
 .enter {
   align-self: end;
-  background: var(--ground);
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .enter svg {
@@ -227,7 +228,7 @@
 }
 
 :global(html[data-bloom="play"]) :is(.lead, .tagline, .enter) {
-  animation: arrive 600ms var(--ease-out) 2100ms backwards;
+  animation: arrive 400ms var(--ease-out) 400ms backwards;
 }
 
 :global(html[data-bloom="play"]) .hero::after {
@@ -261,7 +262,7 @@
 .hero[data-state="leaving"]::after,
 .hero[data-state="leaving"] [data-bloom-art] > :not([data-flower="main"]) {
   opacity: 0;
-  transition: opacity 320ms ease-out;
+  transition: opacity 180ms ease-out;
 }
 
 .flight {

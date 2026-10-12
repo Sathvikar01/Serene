@@ -34,13 +34,14 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   expect(state.event_count).toBe(canonical.events.length);
 
   await expect(page.getByRole("heading", { name: "Maya’s pickup story", exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "Demo mode" })).toContainText("A made-up example");
+  await expect(page.getByRole("complementary", { name: "Demo mode" })).toHaveCount(0);
   await expect(page.getByText("For parents, caregivers, teachers, and clinicians")).toBeVisible();
   await expect(page.getByText("Technical details for this recording")).toHaveCount(0);
   const investigation = page.locator(`[data-investigation-id="${canonical.investigation_id}"]`);
   await expect(investigation).toHaveAttribute("data-phase", canonical.phase);
   const history = state.investigations[canonical.investigation_id].phase_history;
   const shownSteps = investigation.locator("[data-workflow-sequence]");
+  await investigation.getByText("Steps Serene actually took", { exact: true }).click();
   await expect(shownSteps).toHaveCount(history.length);
   await expect(shownSteps.first()).toBeVisible();
   expect(await shownSteps.evaluateAll((steps) => steps.map((s) => Number(s.getAttribute("data-workflow-sequence"))))).toEqual(history.map((s: { sequence: number }) => s.sequence));

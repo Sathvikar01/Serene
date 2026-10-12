@@ -15,7 +15,11 @@ import { ExperimentsView } from "./ExperimentsView";
 // for that child. The decision goes to the kernel; the stage shown changes
 // only when the kernel's record does.
 export function LiveExperiments({ unconnected = UNCONNECTED }: { unconnected?: ExperimentsSource } = {}) {
-  const { live, accessToken } = useFamilyRecord();
+  const record = useFamilyRecord();
+  const { live, accessToken } = record;
+  if (record.status === "loading" || (record.status === "signed-in" && record.children.status === "loading")) {
+    return <ExperimentsView source={{ status: "loading" }} />;
+  }
   if (!live) return <ExperimentsView source={unconnected} />;
   // Remount on child changes, discarding both previous data and decisions.
   return <ConnectedExperiments key={live.childId} {...live} accessToken={accessToken} />;

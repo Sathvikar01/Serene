@@ -1,13 +1,14 @@
 /* The reference's three hairlines, without a box around them. */
 .trigger {
   position: relative;
-  display: grid;
-  place-items: center;
-  width: var(--tap-target);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: var(--tap-target);
   height: var(--tap-target);
-  margin-right: calc(var(--space-3) * -1);
-  padding: 0;
-  border: 0;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   background: transparent;
   color: var(--ink);
@@ -30,6 +31,7 @@
 
 /* A full sheet of the same ruled paper, lowered over the page. */
 .sheet {
+  overscroll-behavior: contain;
   width: 100%;
   max-width: none;
   height: 100dvh;

@@ -83,15 +83,6 @@
   color: var(--ink-muted);
 }
 
-.loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  max-width: 40rem;
-  padding: var(--space-6) 0;
-  color: var(--rule-strong);
-}
-
 .empty,
 .aside {
   font-size: var(--text-sm);

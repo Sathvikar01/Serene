@@ -145,21 +145,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem);
   }
 
-  /* The explanation stays beside the map while it is read. */
-  .selection {
-    position: sticky;
-    top: calc(var(--topbar-height) + var(--space-4));
-    max-height: calc(100dvh - var(--topbar-height) - var(--space-6));
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scroll-padding-top: 4.5rem;
-  }
-
-  .jump {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-  }
+  /* Long explanations use the page scroll rather than a nested reading pane. */
 }
 
 .unplacedOnly {
@@ -459,21 +445,6 @@
 .itemMeta {
   font-size: var(--text-sm);
   color: var(--ink-muted);
-}
-
-.loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  color: var(--rule-strong);
-}
-
-.loadingLine {
-  width: 70%;
-}
-
-.loadingLine + .loadingLine {
-  width: 45%;
 }
 
 @keyframes panel-in {

@@ -14,7 +14,11 @@ import { CausalTwinSurface } from "./CausalTwinSurface";
 // signed in with a child chosen; a session ending or a sign-out drops back to
 // the unconnected state, and the twin goes with it.
 export function LiveCausalTwin() {
-  const { live } = useFamilyRecord();
+  const record = useFamilyRecord();
+  const { live } = record;
+  if (record.status === "loading" || (record.status === "signed-in" && record.children.status === "loading")) {
+    return <CausalTwinSurface source={{ status: "loading" }} />;
+  }
   if (!live) return <CausalTwinSurface source={UNCONNECTED} />;
   // Remount on a child change: the previous child's twin, selection and open
   // panel are discarded before the next child's first row arrives.

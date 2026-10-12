@@ -66,7 +66,7 @@
 
 .bar .list {
   display: flex;
-  gap: var(--space-6);
+  gap: var(--space-2);
 }
 
 .bar .link[aria-current="page"] .label {
@@ -76,9 +76,16 @@
 /* The tracking adds trailing space after the last letter; trim the line. */
 .bar .link {
   --tracking-caps-trim: var(--tracking-caps);
-  font-size: var(--text-2xs);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
+
+.bar .label { font-family: var(--font-sans); letter-spacing: normal; text-transform: none; }
+.bar .link::after { display: none; }
+.bar .link:hover { background: var(--ground-raised); }
+.bar .link[aria-current="page"] { background: var(--selection); }
 
 /* Entering from the landing page: the surfaces arrive one after another,
  * once the flower has settled into the logo. */

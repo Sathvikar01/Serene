@@ -68,18 +68,17 @@
 }
 
 .title {
-  font-size: clamp(2.125rem, 1.4rem + 2.6vw, 3.5rem);
+  font-size: clamp(1.75rem, 1.3rem + 1.5vw, 2.5rem);
   font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  line-height: 1.15;
+  letter-spacing: -0.035em;
   overflow-wrap: anywhere;
 }
 
 .question {
   margin-top: var(--space-2);
   font-family: var(--font-display);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: 500;
   line-height: var(--leading-tight);
   letter-spacing: -0.01em;
@@ -109,29 +108,13 @@
 }
 
 .colophon {
-  align-self: center;
-  max-width: 40ch;
-  margin-top: var(--space-5);
-  font-family: var(--font-display);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  line-height: 1.9;
-  letter-spacing: var(--tracking-caps);
-  text-align: center;
-  text-transform: uppercase;
+  max-width: 64ch;
+  font-size: var(--text-sm);
   color: var(--ink-muted);
 }
 
-.colophon::before {
-  content: "";
-  display: block;
-  width: 2rem;
-  margin: 0 auto var(--space-3);
-  border-top: 1px solid var(--ink-muted);
-}
-
 @media (min-width: 56rem) {
-  .head {
+  .head[data-has-status] {
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem);
     align-items: end;
     column-gap: var(--space-7);
@@ -141,4 +124,24 @@
   .page[data-width="reading"] .head {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+
+.backTop {
+  display: inline-flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-height: var(--tap-target);
+  font-size: var(--text-sm);
+  white-space: nowrap;
 }

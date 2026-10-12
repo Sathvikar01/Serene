@@ -3,7 +3,6 @@ import { LiveExperiments } from "@/components/experiments/LiveExperiments";
 import { Page } from "@/components/layout/Page";
 import { RecordControl } from "@/components/session/RecordControl";
 import { ExperimentsView } from "@/components/experiments/ExperimentsView";
-import { DemoNotice } from "@/components/demo/DemoNotice";
 import { experimentsSourceFrom } from "@/lib/experiments/source";
 import demoPayload from "@/fixtures/synthetic-experiments.json";
 
@@ -20,9 +19,8 @@ export default function ExperimentsPage() {
       title="Experiments"
       question="What could we safely try?"
       lead="Small, reversible changes you might try at home to tell one explanation from another."
-      status={<RecordControl next="/experiments" />}
+      status={demo ? null : <RecordControl next="/experiments" />}
     >
-      {demo ? <DemoNotice /> : null}
       {demo ? <ExperimentsView source={experimentsSourceFrom(demoPayload)} decide={null} /> : <LiveExperiments />}
     </Page>
   );

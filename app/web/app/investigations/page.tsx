@@ -4,7 +4,6 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { Page } from "@/components/layout/Page";
 import { RecordControl } from "@/components/session/RecordControl";
 import { DemoInvestigations } from "@/components/demo/DemoInvestigations";
-import { DemoNotice } from "@/components/demo/DemoNotice";
 
 export const metadata: Metadata = { title: "Investigations" };
 export const dynamic = "force-dynamic";
@@ -19,9 +18,8 @@ export default function InvestigationsPage() {
       title="Investigations"
       question="What might be happening, and what evidence is needed?"
       lead="Questions Serene is looking into, the explanations it is weighing, and the evidence it still needs."
-      status={<RecordControl next="/investigations" />}
+      status={demo ? null : <RecordControl next="/investigations" />}
     >
-      {demo ? <DemoNotice /> : null}
       {demo ? (
         <DemoInvestigations mode="all" />
       ) : (
