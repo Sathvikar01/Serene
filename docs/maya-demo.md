@@ -149,8 +149,9 @@ scenario is deterministic. Reload after reset alone shows an unavailable report
 and clears previous domain results. Missing, malformed or invalid reports fail
 closed. The endpoint and browser fetch both disable caching.
 
-Production `/today`, `/investigations`, `/experiments`, `/memory` and `/causal-twin`
-retain their honest unconnected state. No authentication or RLS changes are made.
+Without authentication, production `/today`, `/investigations`, `/experiments`,
+`/memory` and `/causal-twin` retain their honest unconnected state. This demo makes
+no authentication or RLS changes.
 **#87 (production sign-in/child selection) and #84 (authenticated WEB_APP approval
 transport) remain open.** This page cannot submit approval decisions.
 
