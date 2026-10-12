@@ -244,6 +244,8 @@ audit. Address that release blocker before exposing a public build.
 
 ## Documentation and current limits
 
+- [Final demo checklist and release gate](docs/demo-acceptance.md) — all 18 domain
+  beats and submission evidence; the broader release remains BLOCKED until every item passes.
 - [Architecture](docs/architecture.md), [evidence](docs/evidence-model.md),
   [epistemic ladder](docs/epistemic-model.md), [event model](docs/event-model.md).
 - [Safety](docs/safety.md), [privacy](docs/privacy.md), [evaluation](docs/evaluation.md).
