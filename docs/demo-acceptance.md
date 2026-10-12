@@ -102,4 +102,3 @@ The checklist implementation can be complete while the release is blocked.
 Passing CI tests the gate's refusal and fixture integrity; it does not waive
 unchecked submission requirements. A maintainer must review and update the
 evidence/checkmarks in a normal checked PR before a release bundle can be built.
-
