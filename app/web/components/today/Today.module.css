@@ -12,7 +12,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "attention" "focus" "side";
-  gap: var(--space-6);
+  gap: var(--space-4);
   align-items: start;
 }
 
@@ -42,15 +42,15 @@
     grid-template-columns: minmax(0, 1fr) minmax(17rem, 21rem);
     grid-template-areas: "focus attention" "focus side";
     grid-template-rows: auto 1fr;
-    gap: var(--space-4) var(--space-6);
+    gap: var(--space-3) var(--space-4);
   }
 }
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5) var(--space-5);
+  gap: var(--space-2);
+  padding: var(--space-4);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
   background: var(--ground-lifted);

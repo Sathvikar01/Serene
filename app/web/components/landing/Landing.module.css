@@ -92,8 +92,7 @@
 
 .enter {
   align-self: end;
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--ground);
 }
 
 .enter svg {

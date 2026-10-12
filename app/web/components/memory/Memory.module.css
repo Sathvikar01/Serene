@@ -8,13 +8,13 @@
 .review {
   display: flex;
   flex-direction: column;
-  gap: var(--space-7);
+  gap: var(--space-5);
 }
 
 /* At a glance: counts of what is recorded, each leading to its place. */
 .overview {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -60,9 +60,18 @@
 }
 
 .revision {
-  margin-top: calc(var(--space-5) * -1);
+  margin-top: calc(var(--space-3) * -1);
   font-size: var(--text-xs);
   color: var(--ink-muted);
+}
+
+@media (min-width: 45rem) {
+  .overview { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 30rem) {
+  .tile { padding: var(--space-3); }
+  .tileCount { font-size: var(--text-xl); }
 }
 
 .region {
@@ -174,7 +183,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-5);
+  padding: var(--space-4);
 }
 
 .memoryMeta,
@@ -271,7 +280,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-5);
+  padding: var(--space-4);
   border-top: 1px solid var(--rule);
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   background: var(--ground);
@@ -286,7 +295,7 @@
 @container (min-width: 44rem) {
   .provenanceGrid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: var(--space-6);
+    gap: var(--space-4);
   }
 }
 

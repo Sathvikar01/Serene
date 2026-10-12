@@ -130,7 +130,7 @@ export function Landing() {
         What happened, what Serene remembers and what it believes are kept
         apart.
       </p>
-      <button type="button" className={`button button-solid ${styles.enter}`} onClick={enter} aria-disabled={state === "leaving"} aria-busy={state === "leaving"}>
+      <button type="button" className={`button ${styles.enter}`} onClick={enter} aria-disabled={state === "leaving"} aria-busy={state === "leaving"}>
         {state === "leaving" ? "Opening Serene…" : "Enter Serene"}
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
           <path d="M3 8h10M9 4l4 4-4 4" />

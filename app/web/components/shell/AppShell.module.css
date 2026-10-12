@@ -34,7 +34,7 @@
   padding-inline: max(var(--gutter), calc((100% - 78rem) / 2));
   border-bottom: 1px solid var(--rule);
   /* The ruled sheet passes under the bar, lightly frosted, like the bloom's glass. */
-  background: rgb(243 242 236 / 0.94);
+  background: rgb(224 223 216 / 0.86);
   -webkit-backdrop-filter: blur(10px) saturate(1.1);
   backdrop-filter: blur(10px) saturate(1.1);
 }
@@ -57,7 +57,7 @@
 /* Content wider than the sheet is clipped, never scrolled sideways: no page
  * may widen the phone viewport, whatever its decorative art does mid-animation. */
 .main {
-  padding: var(--space-5) var(--gutter) var(--space-7);
+  padding: var(--space-3) var(--gutter) var(--space-6);
   overflow-x: clip;
 }
 
@@ -82,7 +82,7 @@
 
 @media (min-width: 64rem) {
   .main {
-    padding-top: var(--space-5);
+    padding-top: var(--space-3);
   }
 
   .main[data-landing] {
