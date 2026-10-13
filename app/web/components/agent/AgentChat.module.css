@@ -1,0 +1,15 @@
+.layout { display: grid; gap: var(--space-3); min-width: 0; }
+.chat { display: grid; gap: var(--space-3); border: 1px solid var(--rule-strong); border-radius: var(--radius-md); background: var(--ground-raised); padding: var(--space-4); min-width: 0; }
+.messages { max-height: min(28rem, 50dvh); min-height: 10rem; overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; }
+.turn { padding-block: var(--space-3); border-bottom: 1px solid var(--rule); }
+.turn header { font-size: var(--text-xs); color: var(--ink-muted); display: flex; justify-content: space-between; gap: var(--space-3); }
+.turn h3 { font-size: var(--text-md); margin-block: var(--space-3) var(--space-1); }
+.user { padding: var(--space-3); background: var(--ground-wash); border-radius: var(--radius); }
+.user, .answer { white-space: pre-wrap; }
+.composer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); align-items: end; }
+.composer textarea { resize: vertical; width: 100%; font: inherit; padding: var(--space-3); color: var(--ink); background: var(--ground-lifted); border: 1px solid var(--rule-strong); border-radius: var(--radius); }
+.progress { font-size: var(--text-sm); }
+.error { color: var(--safe-red); }
+.empty { display: grid; gap: var(--space-3); justify-items: start; padding-block: var(--space-4); }
+.memory { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); justify-content: space-between; font-size: var(--text-xs); color: var(--ink-muted); }
+@media (max-width: 30rem) { .composer { grid-template-columns: minmax(0, 1fr); } .composer button { justify-self: end; } }

@@ -34,13 +34,14 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   expect(state.event_count).toBe(canonical.events.length);
 
   await expect(page.getByRole("heading", { name: "Maya’s pickup story", exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "Demo mode" })).toContainText("A made-up example");
+  await expect(page.getByRole("complementary", { name: "Demo mode" })).toHaveCount(0);
   await expect(page.getByText("For parents, caregivers, teachers, and clinicians")).toBeVisible();
   await expect(page.getByText("Technical details for this recording")).toHaveCount(0);
   const investigation = page.locator(`[data-investigation-id="${canonical.investigation_id}"]`);
   await expect(investigation).toHaveAttribute("data-phase", canonical.phase);
   const history = state.investigations[canonical.investigation_id].phase_history;
   const shownSteps = investigation.locator("[data-workflow-sequence]");
+  await investigation.getByText("Evidence and workflow", { exact: true }).click();
   await expect(shownSteps).toHaveCount(history.length);
   await expect(shownSteps.first()).toBeVisible();
   expect(await shownSteps.evaluateAll((steps) => steps.map((s) => Number(s.getAttribute("data-workflow-sequence"))))).toEqual(history.map((s: { sequence: number }) => s.sequence));
@@ -56,7 +57,7 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
     await expect(investigation.locator(`[data-verification=${status}]`)).toHaveCount(expected);
     await expect(investigation.locator(`[data-verification=${status}]`).first()).toBeVisible();
   }
-  await expect(investigation).toContainText("EXCERPT_NOT_ON_SOURCE");
+  await expect(investigation.locator('[data-reason-code="EXCERPT_NOT_ON_SOURCE"]')).toHaveCount(1);
   const missing = state.snapshots.findIndex((s: { investigations: Record<string, { phase: string }> }) => s.investigations[canonical.investigation_id]?.phase === "ASKING_HUMAN");
   expect(missing).toBeGreaterThanOrEqual(0);
   await page.getByLabel("Choose a moment in the story").selectOption(String(missing));
@@ -68,6 +69,7 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
 
   const experiment = state.experiments.experiments[0];
   const card = page.locator(`[data-experiment-id="${experiment.experiment_id}"]`);
+  await card.getByText("Details", { exact: true }).click();
   await expect(card).toHaveAttribute("data-phase", experiment.phase);
   await expect(card).toHaveAttribute("data-safety", experiment.safety_class);
   await expect(card.getByRole("region", { name: "Approval", exact: true })).toContainText("Approved");
@@ -78,7 +80,7 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
     const item = page.locator(`[data-patch-id="${patch.patch_id}"]`);
     await expect(item).toHaveAttribute("data-status", patch.status);
     await expect(item).toContainText(patch.target_path);
-    for (const reason of patch.rejection_reasons) await expect(item).toContainText(reason);
+    for (const reason of patch.rejection_reasons) await expect(item.locator(`[data-reason-code="${reason}"]`)).toHaveCount(1);
   }
   await expect(page.locator("#demo-memory")).toContainText(state.memory.memories[0].body);
   await page.getByText("Explore how the explanations changed", { exact: true }).click();

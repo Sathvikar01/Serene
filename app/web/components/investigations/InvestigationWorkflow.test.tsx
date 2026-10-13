@@ -19,7 +19,7 @@ describe("recorded workflow", () => {
     expect(steps.at(-1)).toHaveTextContent("Waiting for you");
     for (const [i, step] of inv.phase_history!.entries()) {
       expect(steps[i].querySelector("time")).toHaveAttribute("datetime", step.recorded_at);
-      for (const reason of step.reason_codes) expect(steps[i]).toHaveTextContent(reason);
+      for (const reason of step.reason_codes) expect(steps[i].querySelector(`[data-reason-code="${reason}"]`)).not.toBeNull();
     }
   });
 
@@ -46,7 +46,7 @@ describe("recorded workflow", () => {
     render(<InvestigationWorkflow investigation={paused} />);
     expect(document.querySelectorAll('[data-workflow-phase="NEEDS_EVIDENCE"]')).toHaveLength(2);
     expect(screen.getByRole("status")).toHaveTextContent("Paused without an answer");
-    expect(document.querySelector("[data-latest]")).toHaveTextContent("PARENT_NO_RESPONSE");
+    expect(document.querySelector('[data-latest] [data-reason-code="PARENT_NO_RESPONSE"]')).not.toBeNull();
   });
 
   it("does not mark skipped stages as passed just because an investigation finished", () => {

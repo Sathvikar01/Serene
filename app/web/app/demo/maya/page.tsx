@@ -12,7 +12,7 @@ export default function MayaDemoPage() {
   return <Page
     title="Maya’s pickup story"
     question="Why might daycare pickup be hard for Maya?"
-    lead="Follow one made-up family story, from the first reports to a parent-approved trial and the lesson Serene keeps."
+    lead="Follow Maya’s pickup story, from the first reports to a parent-approved trial and the lesson Serene keeps."
     width="wide"
     status={null}
   >

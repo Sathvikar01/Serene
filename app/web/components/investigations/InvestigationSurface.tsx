@@ -1,8 +1,8 @@
 "use client";
 
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
-import { LineMark } from "@/components/notation/LineMark";
 import { ProjectionStatus } from "@/components/projections/ProjectionStatus";
 import { TodayBrief } from "@/components/today/TodayBrief";
 import { current, parseInvestigations, type Investigation } from "@/lib/investigations/model";
@@ -30,12 +30,7 @@ export function InvestigationSurface({ feed, childId, mode, unconnected }: Props
   if (state.status === "unconnected") return <>{unconnected}</>;
   if (state.status === "connecting") {
     return (
-      <div className={styles.loading} role="status">
-        <span className="visually-hidden">Connecting to Serene</span>
-        <LineMark certainty="unknown" />
-        <LineMark certainty="unknown" />
-        <LineMark certainty="unknown" />
-      </div>
+      <SurfaceLoading label="Connecting to Serene" compact />
     );
   }
   if (state.status === "error") {

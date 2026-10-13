@@ -239,9 +239,7 @@ describe("the edge provenance panel", () => {
     await user.tab();
     expect(panel()).toContainElement(document.activeElement as HTMLElement);
     await user.keyboard("{Escape}");
-    expect(screen.getByRole("complementary", { name: "Selected link" })).not.toHaveAttribute(
-      "data-selected-edge-id",
-    );
+    expect(screen.queryByRole("complementary", { name: "Selected link" })).not.toBeInTheDocument();
     expect(listItem(HYP(4))).toHaveFocus();
 
     await user.keyboard("{Enter}");

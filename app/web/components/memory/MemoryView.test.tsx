@@ -9,7 +9,10 @@ const view = parseMemoryDreamView(payload);
 const ready: MemorySource = { status: "ready", view };
 
 function renderView(source: MemorySource = ready) {
-  return render(<MemoryView source={source} />);
+  const result = render(<MemoryView source={source} />);
+  // Record-fidelity tests inspect the complete record after disclosure.
+  for (const details of result.container.querySelectorAll("details")) details.open = true;
+  return result;
 }
 
 describe("MemoryView with a fixture Dream run", () => {
@@ -62,7 +65,7 @@ describe("MemoryView with a fixture Dream run", () => {
     expect(refused[0]).toHaveTextContent(
       "Not enough evidence: it rests on an observation, and this kind of memory needs at least a pattern.",
     );
-    expect(refused[0]).toHaveTextContent("INSUFFICIENT_EVIDENCE:OBSERVATION_BELOW_PATTERN");
+    expect(refused[0].querySelector('[data-reason-code="INSUFFICIENT_EVIDENCE:OBSERVATION_BELOW_PATTERN"]')).not.toBeNull();
   });
 
   it("groups each Dream run's proposals, newest run first, and lists its steps", () => {

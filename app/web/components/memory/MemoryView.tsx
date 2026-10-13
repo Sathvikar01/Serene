@@ -1,3 +1,5 @@
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
+import { Disclosure } from "@/components/layout/Disclosure";
 import { useId, type ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { LineMark, type Certainty } from "@/components/notation/LineMark";
@@ -46,17 +48,12 @@ export function MemoryView({ source, retry }: MemoryViewProps) {
               and anything Serene decided not to keep will say why.
             </p>
           </EmptyState>
-          <MemoryGuide />
+          <Disclosure title="About memory"><MemoryGuide /></Disclosure>
         </>
       );
     case "loading":
       return (
-        <div className={styles.loading} role="status">
-          <span className="visually-hidden">Loading memory</span>
-          <LineMark certainty="unknown" />
-          <LineMark certainty="unknown" />
-          <LineMark certainty="unknown" />
-        </div>
+        <SurfaceLoading label="Loading memory" compact />
       );
     case "error":
       return (
@@ -143,18 +140,11 @@ function MemoryReview({ view }: { view: MemoryDreamView }) {
             <span className={styles.tileSep}> / </span>
             {count("PROPOSED")}
           </span>
-          <span className={styles.tileTerm}>changes kept / refused / awaiting review</span>
+          <span className={styles.tileTerm}>kept / refused / pending</span>
         </a>
       </nav>
-      <p className={styles.revision}>
-        Memory revision: <code className={styles.refId}>{view.memory_head}</code>
-      </p>
 
       <Region title="What Serene remembers" name="memories">
-        <p className={styles.intro}>
-          Memories are written only by Serene’s memory writer, after a fixed review. Each one shows
-          the evidence it rests on. You cannot edit memory here.
-        </p>
         {view.memories.length === 0 ? (
           <p className={styles.empty}>Nothing has been kept in memory yet.</p>
         ) : (
@@ -165,7 +155,7 @@ function MemoryReview({ view }: { view: MemoryDreamView }) {
               <div key={group.title} className={styles.memoryGroup} data-memory-group={group.statuses[0]}>
                 <div className={styles.groupHead}>
                   <p className={styles.groupTitle}>{group.title}</p>
-                  <p className={styles.groupNote}>{group.note}</p>
+                  {group.statuses[0] !== "ACTIVE" && <p className={styles.groupNote}>{group.note}</p>}
                 </div>
                 <ul className={styles.memories}>
                   {members.map((memory) => (
@@ -196,13 +186,8 @@ function MemoryReview({ view }: { view: MemoryDreamView }) {
         ) : null}
       </Region>
 
+      <Disclosure title={`Memory history · ${view.dream_runs.length} ${view.dream_runs.length === 1 ? "run" : "runs"}`}>
       <Region title="Dream runs" name="dream-runs">
-        <p className={styles.intro}>
-          Dreaming looks back over what has happened and proposes changes to memory. It cannot write
-          memory itself: a fixed review decides what is kept, and every refusal is recorded with its
-          reasons.
-        </p>
-        <DreamFlow />
         {view.dream_runs.length === 0 ? (
           <p className={styles.empty}>No Dream run has been recorded yet.</p>
         ) : (
@@ -228,6 +213,8 @@ function MemoryReview({ view }: { view: MemoryDreamView }) {
           </ul>
         </Region>
       ) : null}
+      <p className={styles.revision}>Memory revision: <code className={styles.refId}>{view.memory_head}</code></p>
+      </Disclosure>
     </div>
   );
 }
@@ -374,6 +361,7 @@ function Memory({ memory, keptBy }: { memory: MemoryItem; keptBy: Patch | null }
         </dl>
       </div>
 
+      <Disclosure title="Evidence and source">
       <section className={styles.provenance} aria-labelledby={`${id}-provenance`} data-provenance-for={memory.path}>
         <h4 id={`${id}-provenance`} className={styles.subheading}>
           Where it came from, and why it is kept
@@ -459,6 +447,7 @@ function Memory({ memory, keptBy }: { memory: MemoryItem; keptBy: Patch | null }
           </div>
         </div>
       </section>
+      </Disclosure>
     </article>
   );
 }

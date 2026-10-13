@@ -1,0 +1,11 @@
+.details { min-width: 0; border-top: 1px solid var(--rule); }
+.details > summary {
+  min-height: var(--tap-target);
+  display: list-item;
+  padding-block: var(--space-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.details > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.body { display: grid; gap: var(--space-4); min-width: 0; padding-bottom: var(--space-3); }
