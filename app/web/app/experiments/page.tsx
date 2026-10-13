@@ -17,8 +17,6 @@ export default function ExperimentsPage() {
   return (
     <Page
       title="Experiments"
-      question="What could we safely try?"
-      lead="Small, reversible changes you might try at home to tell one explanation from another."
       status={demo ? null : <RecordControl next="/experiments" />}
     >
       {demo ? <ExperimentsView source={experimentsSourceFrom(demoPayload)} decide={null} /> : <LiveExperiments />}

@@ -49,7 +49,6 @@ export function DecisionPanel({ experiment, decide }: DecisionPanelProps) {
           This cannot be approved
         </p>
         <p>{SAFETY_LABELS.RED.description}</p>
-        <p className={styles.decisionNote}>Serene fails closed: no button, link or message can start it.</p>
       </div>
     );
   }
@@ -69,9 +68,9 @@ export function DecisionPanel({ experiment, decide }: DecisionPanelProps) {
       <div className={styles.decision} data-decision="unconnected" role="note">
         <p className={styles.decisionTitle}>
           <Icon name="ring" className={styles.decisionIcon} />
-          Deciding from this page is not connected yet
+          Approval unavailable
         </p>
-        <p>Nothing on this page can approve or decline it. Nothing starts without your approval.</p>
+        <p>Connect your family record to decide.</p>
       </div>
     );
   }

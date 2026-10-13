@@ -29,7 +29,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-5);
+  gap: var(--space-2);
   height: var(--topbar-height);
   padding-inline: max(var(--gutter), calc((100% - 78rem) / 2));
   border-bottom: 1px solid var(--rule);
@@ -54,6 +54,9 @@
   margin-left: auto;
 }
 
+.ask { margin-left: auto; font-size: var(--text-xs); font-weight: 600; white-space: nowrap; }
+.ask + .menu { margin-left: 0; }
+
 /* Content wider than the sheet is clipped, never scrolled sideways: no page
  * may widen the phone viewport, whatever its decorative art does mid-animation. */
 .main {
@@ -71,6 +74,7 @@
 }
 
 @media (min-width: 60rem) {
+  .topbar { gap: var(--space-5); }
   .barNav {
     display: block;
   }

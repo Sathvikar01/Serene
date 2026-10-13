@@ -4,9 +4,8 @@ import { EmptyState } from "@/components/layout/EmptyState";
 import { Icon } from "@/components/system/Icon";
 import { Onward, Time } from "@/components/system/Record";
 import { SafetyBadge } from "@/components/system/SafetyBadge";
-import { LEARNING_STATUS_LABELS, LEVEL_NAMES } from "@/lib/causal-twin/provenance";
+import { LEARNING_STATUS_LABELS } from "@/lib/causal-twin/provenance";
 import { variableLabel } from "@/lib/causal-twin/categories";
-import type { EpistemicLevel } from "@/lib/causal-twin/model";
 import type { Investigation } from "@/lib/investigations/model";
 import { PHASE_LABELS } from "@/lib/investigations/present";
 import type { Projections } from "@/lib/projections/sync";
@@ -21,7 +20,6 @@ type TodayBriefProps = {
   status: ReactNode;
 };
 
-const LADDER: readonly EpistemicLevel[] = [5, 4, 3, 2, 1, 0];
 
 // Today: what matters now. One thing leads, the current investigation and
 // what Serene will do next; what needs the parent, what Serene holds and
@@ -41,6 +39,7 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
       {status}
       <div className={styles.layout}>
         <div className={styles.attention}>
+          {needs === 0 ? <p className={styles.quiet}>Nothing needs your attention.</p> : (
           <Side title="Needs you" icon="hand" emphasis={needs > 0}>
             {needs === 0 ? (
               <p className={styles.quiet}>
@@ -54,8 +53,7 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
                   <span className={styles.needKind}>
                     <Icon name="ask" /> A question for you
                   </span>
-                  <span className={styles.needText}>“{asked.next_action.question}”</span>
-                  <Onward href={`/investigations#${investigationAnchor(asked.investigation_id)}`}>Why Serene is asking</Onward>
+                  <Onward href={`#${investigationAnchor(asked.investigation_id)}`}>View question</Onward>
                 </li>
               ) : null}
               {awaiting?.map((e) => (
@@ -72,7 +70,7 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
             {awaiting === null && projections.experiments ? (
               <p className={styles.quiet}>Experiments could not be read here. Open Experiments to see them.</p>
             ) : null}
-          </Side>
+          </Side>)}
         </div>
         <div className={styles.focus}>
           {current ? (
@@ -93,17 +91,15 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
 
         <div className={styles.side}>
           {childState ? (
-            <Side title="What Serene holds" icon="memory">
-              <p className={styles.quiet}>Recorded items for this child, by how far up the evidence ladder each stands.</p>
-              <ChildLadder byLevel={childState.byLevel} />
+            <Side title="Memory" icon="memory">
               <p className={styles.evidenceLine}>
-                Evidence: {childState.evidence.VERIFIED} verified, {childState.evidence.UNVERIFIED} not checked yet,{" "}
-                {childState.evidence.REJECTED} rejected.
+                {childState.evidence.VERIFIED} verified{childState.evidence.UNVERIFIED > 0 ? ` · ${childState.evidence.UNVERIFIED} unchecked` : ""}{childState.evidence.REJECTED > 0 ? ` · ${childState.evidence.REJECTED} rejected` : ""}
               </p>
+              <Onward href="/memory" ariaLabel="View memory">View</Onward>
             </Side>
           ) : null}
 
-          {learnings ? (
+          {learnings && learnings.length > 0 ? (
             <Side title="Learned in context" icon="leaf">
               {learnings.length === 0 ? (
                 <p className={styles.quiet}>
@@ -166,22 +162,5 @@ function Side({
       </h2>
       {children}
     </section>
-  );
-}
-
-function ChildLadder({ byLevel }: { byLevel: Record<EpistemicLevel, number> }) {
-  const most = Math.max(1, ...LADDER.map((l) => byLevel[l]));
-  return (
-    <ol className={styles.ladder} aria-label="Recorded items by evidence level">
-      {LADDER.map((level) => (
-        <li key={level} className={styles.ladderRow} data-empty={byLevel[level] === 0 || undefined}>
-          <span className={styles.ladderName}>{LEVEL_NAMES[level]}</span>
-          <span className={styles.ladderBar} aria-hidden="true">
-            <span style={{ width: `${(byLevel[level] / most) * 100}%` }} />
-          </span>
-          <span className={styles.ladderCount}>{byLevel[level]}</span>
-        </li>
-      ))}
-    </ol>
   );
 }

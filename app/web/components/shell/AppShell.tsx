@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { MobileMenu } from "./MobileMenu";
 import { SurfaceNav } from "./SurfaceNav";
@@ -14,8 +15,9 @@ import styles from "./AppShell.module.css";
 //
 // On the landing page the bar is held empty: entering Serene flies the
 // bloom's flower into the logo's place, then the bar fills in.
-export function AppShell({ children }: { children: ReactNode }) {
-  const landing = usePathname() === "/";
+export function AppShell({ children, demo = false }: { children: ReactNode; demo?: boolean }) {
+  const pathname = usePathname();
+  const landing = pathname === "/";
 
   return (
     <LoadingProvider initialLoading={!landing}>
@@ -29,6 +31,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className={styles.barNav}>
             <SurfaceNav variant="bar" />
           </div>
+          {demo ? <Link className={styles.ask} href="/agent" aria-current={pathname === "/agent" ? "page" : undefined}>Ask Serene</Link> : null}
           <div className={styles.menu}>
             <MobileMenu />
           </div>

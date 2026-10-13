@@ -2,6 +2,8 @@
 
 Goal: reduce unused whitespace while preserving the original warm paper, ruled grid, uppercase typography, navigation and flower logo.
 
+Follow-up: reduce visible text and remove unnecessary containers. Primary headers now use only their title. Today is a compact summary, evidence/workflow and memory history expand on demand, empty side panels are omitted, and the belief map uses the full width until a link is selected. Restore the existing local Ask Serene client and service connection from the user's working copy; keep that copy unchanged.
+
 | Issue | Impact | Fix | Check |
 | --- | --- | --- | --- |
 | Default h4–h6 margins add unwanted gaps inside cards | High | Reset all heading margins; let component gap tokens control spacing | Browser checks confirm zero heading margins |

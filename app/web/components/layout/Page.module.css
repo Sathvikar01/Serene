@@ -130,7 +130,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-4);
   margin-top: var(--space-3);
   padding-top: var(--space-3);
@@ -149,7 +149,7 @@
 /* Keep the original title treatment, but use the width of a desktop sheet
  * for its context rather than stacking a tall introductory block. */
 @media (min-width: 80rem) {
-  .page:not([data-width="reading"]) .head:not([data-has-status]) .heading {
+  .page:not([data-width="reading"]) .head:not([data-has-status]) .heading[data-has-context] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: var(--space-5);

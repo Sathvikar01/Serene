@@ -1,4 +1,5 @@
 import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
+import { Disclosure } from "@/components/layout/Disclosure";
 import { useId, type ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { LineMark, type Certainty } from "@/components/notation/LineMark";
@@ -165,23 +166,22 @@ function ExperimentCard({ experiment, decide }: { experiment: Experiment; decide
         <h3 id={headingId} className={styles.title}>
           {intervention.description}
         </h3>
-        <p className={styles.phaseText}>{PHASE_LABELS[experiment.phase].description}</p>
-        <StageTrack label="Where this experiment is" steps={lifecycle(experiment)} className={styles.track} />
       </header>
-
+      <Disclosure title="Details" open={experiment.phase === "AWAITING_APPROVAL"}>
+      <StageTrack label="Where this experiment is" steps={lifecycle(experiment)} className={styles.track} />
       <div className={styles.body} data-deciding={deciding || undefined}>
         <div className={styles.spec}>
           <dl className={styles.cells}>
             <Fact icon="undo" term="Can it be undone?" strong={!intervention.reversible}>
-              {intervention.reversible ? "Yes. It can be stopped and undone at any time." : "No. It could not be undone."}
+              {intervention.reversible ? "Yes" : "No"}
             </Fact>
-            <Fact icon="clock" term="Longest it runs">
+            <Fact icon="clock" term="Duration">
               {days} {days === 1 ? "day" : "days"}
             </Fact>
-            <Fact icon="weight" term="Effort for your family">
+            <Fact icon="weight" term="Effort">
               {BURDEN_LABELS[intervention.burden]}
             </Fact>
-            <Fact icon="flask" term="Kind of change">
+            <Fact icon="flask" term="Change">
               {CATEGORY_LABELS[intervention.category]}
             </Fact>
           </dl>
@@ -321,6 +321,7 @@ function ExperimentCard({ experiment, decide }: { experiment: Experiment; decide
           {deciding ? <DecisionPanel experiment={experiment} decide={decide} /> : null}
         </section>
       </div>
+      </Disclosure>
     </article>
   );
 }

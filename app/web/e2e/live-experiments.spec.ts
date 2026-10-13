@@ -67,6 +67,7 @@ test("a refusal is shown with its reasons and nothing changes", async ({ page })
 
 test("RED can never be approved, signed in or not", async ({ page }) => {
   await signIn(page);
+  await card(page, red.experiment_id).getByText("Details", { exact: true }).click();
   await expect(card(page, red.experiment_id).getByRole("button", { name: "Approve" })).toHaveCount(0);
   await expect(card(page, red.experiment_id).locator('[data-decision="not-approvable"]')).toBeVisible();
 });

@@ -16,8 +16,6 @@ export default function CausalTwinPage() {
   return (
     <Page
       title="Causal Twin"
-      question="Why does Serene believe what it believes?"
-      lead="A map of what may influence what in your child’s days, drawn by how firmly each link is known. Choose any link to follow it down to the evidence."
       width="wide"
       status={demo ? null : <RecordControl next="/causal-twin" />}
     >

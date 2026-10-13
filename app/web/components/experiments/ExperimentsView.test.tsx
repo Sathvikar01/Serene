@@ -22,11 +22,12 @@ describe("ExperimentsView across the lifecycle", () => {
       const article = card(container, `[data-phase="${phase}"]`);
       expect(article, phase).not.toBeNull();
       expect(article.querySelector("[data-phase-label]")).toHaveTextContent(PHASE_LABELS[phase].term);
-      expect(article).toHaveTextContent(PHASE_LABELS[phase].description);
+      expect(article.querySelector("summary")).toHaveTextContent("Details");
     }
   });
 
-  it("shows intervention, risk, reversibility, approval, stage, outcomes and promotion for every experiment", () => {
+  it("keeps intervention, risk, reversibility, approval, stage, outcomes and promotion available in details", async () => {
+    const user = userEvent.setup();
     const { container } = render(<ExperimentsView source={ready} />);
     const articles = [...container.querySelectorAll<HTMLElement>("article[data-experiment-id]")];
     expect(articles).toHaveLength(view.experiments.length);
@@ -34,7 +35,9 @@ describe("ExperimentsView across the lifecycle", () => {
       const e = view.experiments.find((x) => x.experiment_id === article.dataset.experimentId)!;
       expect(within(article).getByRole("heading", { level: 3 })).toHaveTextContent(e.intervention.description);
       expect(article.querySelector("[data-safety-label]")!.textContent).toMatch(/^Risk: /);
-      expect(article).toHaveTextContent(e.intervention.reversible ? "Yes. It can be stopped and undone" : "No.");
+      const details = article.querySelector<HTMLDetailsElement>("details[data-record-details]")!;
+      if (!details.open) await user.click(details.querySelector("summary")!);
+      expect(within(article).getByText("Can it be undone?").parentElement).toHaveTextContent(e.intervention.reversible ? "Yes" : "No");
       for (const name of ["Risk", "Approval", "Timeline", "Outcomes", "Promotion result"]) {
         expect(within(article).getByRole("region", { name })).toBeInTheDocument();
       }
@@ -49,7 +52,7 @@ describe("ExperimentsView across the lifecycle", () => {
     );
     const denied = container.querySelector('[data-promotion="denied"]')!.closest("section")!;
     expect(denied).toHaveTextContent("An outcome contradicted the explanation.");
-    expect(denied).toHaveTextContent("CONTRADICTING_OUTCOME");
+    expect(denied.querySelector('[data-reason-code="CONTRADICTING_OUTCOME"]')).not.toBeNull();
   });
 
   it("puts what needs the parent first", () => {
@@ -74,10 +77,11 @@ describe("RED interventions", () => {
     const decide = vi.fn();
     const { container } = render(<ExperimentsView source={ready} decide={decide} />);
     const red = card(container, '[data-safety="RED"]');
+    await userEvent.setup().click(within(red).getByText("Details", { exact: true }));
     expect(red.dataset.phase).toBe("BLOCKED");
     expect(red.querySelector("[data-safety-label]")).toHaveTextContent("Risk: Not allowed");
     expect(red.querySelector('[data-decision="not-approvable"]')).toHaveTextContent("This cannot be approved");
-    expect(within(red).getByRole("list", { name: "Why it is blocked" })).toHaveTextContent("RED_FAIL_CLOSED");
+    expect(red.querySelector('[data-reason-code="RED_FAIL_CLOSED"]')).not.toBeNull();
     expect(within(red).queryAllByRole("button")).toEqual([]);
     expect(decide).not.toHaveBeenCalled();
   });

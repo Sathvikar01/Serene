@@ -5,6 +5,7 @@ import { LevelLadder } from "@/components/system/LevelLadder";
 import { Onward, Pair, Pairs, Reasons, Time } from "@/components/system/Record";
 import { StageTrack } from "@/components/system/StageTrack";
 import { InvestigationWorkflow } from "./InvestigationWorkflow";
+import { Disclosure } from "@/components/layout/Disclosure";
 import type { EvidenceItem, Hypothesis, Investigation, NextActionKind } from "@/lib/investigations/model";
 import {
   CHANNEL_LABELS,
@@ -92,18 +93,13 @@ export function InvestigationDetail({ investigation: inv, headingLevel: Heading 
         <Heading id={headingId} className={styles.question}>
           {brief ? inv.question.replace(/synthetic Maya/gi, "Maya") : inv.question}
         </Heading>
-        <StageTrack
-          label="Where this investigation stands"
-          steps={investigationStages(inv)}
-          className={styles.track}
-        />
       </header>
 
       <div className={styles.workspace}>
         <div className={styles.rail}>
           <NextAction inv={inv} brief={brief} />
 
-          <Block title="What Serene doesn’t know yet" name="uncertainty">
+          <Block title="Still uncertain" name="uncertainty">
             {inv.uncertainty.length === 0 ? (
               <p className={styles.empty}>Serene recorded no open uncertainty for this question.</p>
             ) : (
@@ -119,6 +115,9 @@ export function InvestigationDetail({ investigation: inv, headingLevel: Heading 
           </Block>
         </div>
 
+      </div>
+      <Disclosure title="Evidence and workflow">
+        <StageTrack label="Where this investigation stands" steps={investigationStages(inv)} className={styles.track} />
         <div className={styles.main}>
           <Block
             title="Explanations being weighed"
@@ -256,8 +255,8 @@ export function InvestigationDetail({ investigation: inv, headingLevel: Heading 
             )}
           </Block>
         </div>
-      </div>
-      <InvestigationWorkflow investigation={inv} headingLevel={Heading === "h2" ? "h3" : "h4"} collapsed={brief} />
+        <InvestigationWorkflow investigation={inv} headingLevel={Heading === "h2" ? "h3" : "h4"} />
+      </Disclosure>
     </article>
   );
 }
@@ -271,14 +270,14 @@ function NextAction({ inv, brief }: { inv: Investigation; brief: boolean }) {
     <section className={styles.next} aria-labelledby={id} data-block="next-action" data-kind={kind}>
       <h4 id={id} className={styles.nextLabel}>
         <Icon name={icon} className={styles.nextIcon} />
-        What Serene will do next
+        Next step
       </h4>
       <p className={styles.nextTitle} data-next-action={kind}>
-        {action.title}
+        {brief && kind === "NONE_COMPLETE" ? "No action needed." : action.title}
       </p>
       {action.detail ? <p className={styles.nextDetail}>{action.detail}</p> : null}
-      {inv.next_action.reason_codes.length > 0 ? (
-        <Reasons codes={inv.next_action.reason_codes} label="Why it stopped" explain={explainReason} />
+      {!brief && inv.next_action.reason_codes.length > 0 ? (
+        <Disclosure title="Why"><Reasons codes={inv.next_action.reason_codes} label="Why it stopped" explain={explainReason} /></Disclosure>
       ) : null}
       {kind === "WAIT_FOR_APPROVAL" ? (
         <p className={styles.nextOnward}>
@@ -286,7 +285,7 @@ function NextAction({ inv, brief }: { inv: Investigation; brief: boolean }) {
         </p>
       ) : brief ? (
         <p className={styles.nextOnward}>
-          <Onward href={`/investigations#${investigationAnchor(inv.investigation_id)}`}>See the whole investigation</Onward>
+          <Onward href={`/investigations#${investigationAnchor(inv.investigation_id)}`}>View investigation</Onward>
         </p>
       ) : null}
     </section>

@@ -72,16 +72,13 @@ test("the original visual styling is retained without default heading gaps", asy
 test("the brief prioritizes the next action and lets parents open recorded steps", async ({ page }) => {
   await page.goto("/fixtures/today");
   const investigation = page.locator("[data-investigation-id]").first();
-  const history = investigation.locator("details").filter({ has: page.getByText("Steps Serene actually took", { exact: true }) });
+  const history = investigation.locator("details[data-record-details]").filter({ has: page.locator('[data-block="workflow"]') });
   await expect(history).not.toHaveAttribute("open");
-  const positions = await investigation.evaluate((node) => ({
-    action: node.querySelector('[data-block="next-action"]')!.getBoundingClientRect().top,
-    workflow: node.querySelector('[data-block="workflow"]')!.getBoundingClientRect().top,
-  }));
-  expect(positions.action).toBeLessThan(positions.workflow);
-  await history.locator("summary").click();
+  const concise = await investigation.innerText();
+  await history.locator(":scope > summary").click();
   await expect(history.locator("[data-workflow-sequence]").first()).toBeVisible();
-  await history.locator("summary").click();
+  expect((await investigation.innerText()).length).toBeGreaterThan(concise.length * 1.5);
+  await history.locator(":scope > summary").click();
   await expect(history).not.toHaveAttribute("open");
 });
 

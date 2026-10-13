@@ -16,8 +16,6 @@ export default function InvestigationsPage() {
   return (
     <Page
       title="Investigations"
-      question="What might be happening, and what evidence is needed?"
-      lead="Questions Serene is looking into, the explanations it is weighing, and the evidence it still needs."
       status={demo ? null : <RecordControl next="/investigations" />}
     >
       {demo ? (
@@ -28,10 +26,7 @@ export default function InvestigationsPage() {
           unconnected={
             <EmptyState title="No open investigations">
               <p>
-                An investigation opens when a concern has more than one plausible
-                explanation. Serene sets the explanations side by side, asks for the
-                evidence that would tell them apart, and checks that evidence before
-                believing it.
+                New questions and their evidence will appear here.
               </p>
             </EmptyState>
           }

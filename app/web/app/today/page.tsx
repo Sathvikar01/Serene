@@ -5,6 +5,7 @@ import { Page } from "@/components/layout/Page";
 import { LineKey, type LineKeyEntry } from "@/components/notation/LineKey";
 import { RecordControl } from "@/components/session/RecordControl";
 import { DemoInvestigations } from "@/components/demo/DemoInvestigations";
+import { Disclosure } from "@/components/layout/Disclosure";
 
 export const metadata: Metadata = { title: "Today" };
 export const dynamic = "force-dynamic";
@@ -32,8 +33,6 @@ export default function TodayPage() {
   return (
     <Page
       title="Today"
-      question="What matters now?"
-      lead="What Serene is working on, what it doesn’t know yet, and what it would do next, each with how sure it is."
       status={demo ? null : <RecordControl next="/today" />}
     >
       {/* The current investigation, from the `investigations` projection over the
@@ -47,15 +46,13 @@ export default function TodayPage() {
           unconnected={
             <EmptyState title="Nothing to review today">
               <p>
-                No family record is connected, so there is nothing to report. When
-                there is, Today leads with the one question Serene is working on and
-                what it will do next, with anything that needs you beside it.
+                Connect a family record to see updates.
               </p>
             </EmptyState>
           }
         />
       )}
-      <LineKey title="How Serene shows what it’s sure of" entries={CERTAINTY_KEY} />
+      <Disclosure title="How to read certainty"><LineKey title="How Serene shows what it’s sure of" entries={CERTAINTY_KEY} /></Disclosure>
     </Page>
   );
 }

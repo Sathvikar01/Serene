@@ -20,9 +20,10 @@
 
 .tile {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--space-4);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
   background: var(--ground-lifted);
@@ -44,7 +45,7 @@
 
 .tileCount {
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 600;
   line-height: 1;
 }
@@ -60,7 +61,7 @@
 }
 
 .revision {
-  margin-top: calc(var(--space-3) * -1);
+  margin-top: 0;
   font-size: var(--text-xs);
   color: var(--ink-muted);
 }
@@ -173,6 +174,8 @@
   outline: 2px solid var(--ink);
   outline-offset: 4px;
 }
+
+.memory > :global([data-record-details]) > summary { padding-inline: var(--space-4); }
 
 .memory[data-learning-status="DEPRECATED"],
 .memory[data-learning-status="STALE"] {

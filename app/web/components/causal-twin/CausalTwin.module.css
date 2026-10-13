@@ -141,7 +141,7 @@
 }
 
 @media (min-width: 64rem) {
-  .stage {
+  .stage[data-has-selection] {
     grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem);
   }
 

@@ -14,8 +14,6 @@ export default function MemoryPage() {
   return (
     <Page
       title="Memory"
-      question="What has Serene learned and kept?"
-      lead="What Serene remembers about your family, why each memory is kept, and where it came from."
       status={demo ? null : <RecordControl next="/memory" />}
     >
       {demo ? <MemoryView source={memorySourceFrom(demoPayload)} /> : <LiveMemory />}

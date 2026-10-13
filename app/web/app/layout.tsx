@@ -53,7 +53,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <BloomDirector />
         <FamilyRecordProvider>
-          <AppShell>{children}</AppShell>
+          <AppShell demo={process.env.SERENE_DEMO_MODE === "1"}>{children}</AppShell>
         </FamilyRecordProvider>
       </body>
     </html>
