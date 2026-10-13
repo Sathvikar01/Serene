@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { GET, POST } from "./route";
 
 vi.mock("node:fs/promises", () => {
-  const readFile = vi.fn(async () => "server-only-test-secret");
+  const readFile = vi.fn(async () => "test-server-only-secret");
   return { readFile, default: { readFile } };
 });
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
@@ -33,7 +33,7 @@ it("rejects malformed messages and keeps the service credential server-side", as
   const response = await GET(request("127.0.0.1:3000"));
   expect(response.status).toBe(200);
   expect(fetch).toHaveBeenCalledWith("http://127.0.0.1:8788/agent", expect.objectContaining({
-    headers: expect.objectContaining({ Authorization: "Bearer server-only-test-secret" }),
+    headers: expect.objectContaining({ Authorization: "Bearer test-server-only-secret" }),
   }));
-  expect(await response.text()).not.toContain("server-only-test-secret");
+  expect(await response.text()).not.toContain("test-server-only-secret");
 });
