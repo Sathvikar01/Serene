@@ -150,7 +150,8 @@ test("every route has one h1, no horizontal overflow and a clean console", async
 test("the menu sheet closes on Escape and gives focus back", async ({ page }) => {
   await page.goto("/experiments");
   const trigger = page.getByRole("button", { name: "Surfaces" });
-  test.skip(!(await trigger.isVisible()), "the inline nav replaces the sheet at this width");
+  if (!(await trigger.isVisible())) await page.setViewportSize({ width: 390, height: 844 });
+  await expect(trigger).toBeVisible();
 
   await trigger.focus();
   await page.keyboard.press("Enter");

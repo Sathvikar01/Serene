@@ -93,12 +93,4 @@ def memory_dream(state: KernelState, snapshot: MemorySnapshot) -> dict[str, Any]
     if memory.head() != revision:
         raise MemoryPublicationError("MEMORY_REVISION_MISMATCH")
     view = build_memory_dream_view(state, memory).model_dump(mode="json")
-    # Document bytes stay pinned. Learning lifecycle is the replayable ledger's
-    # current status, evaluated at ledger time rather than the rebuild clock.
-    from serene.projections.views import effective_learning_status
-
-    for item in view["memories"]:
-        learning = state.learnings.get(item["subject"])
-        if learning is not None and state.last_recorded_at is not None:
-            item["status"] = effective_learning_status(learning, state.last_recorded_at).value
     return privacy_checked(view)
