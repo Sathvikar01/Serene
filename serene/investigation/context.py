@@ -30,9 +30,9 @@ from serene.domain.events import AcquisitionMode
 from serene.domain.values import VerificationStatus
 from serene.evidence.micro_answer import MicroAnswerValue, decode_micro_answer
 from serene.policies.investigation import active_hypotheses, requests_of
+from serene.policies.learning import effective_status
 from serene.ports.memory import MemoryRepository
 from serene.projections.state import KernelState, LifecycleStatus
-from serene.projections.views import effective_learning_status
 
 MEMORY_PREFIXES: Final = (
     "child/",
@@ -379,7 +379,7 @@ class ContextRetriever:
                     entity_id=learning_id,
                     kind="learning",
                     level="CONTEXTUAL_LEARNING",
-                    status=effective_learning_status(learning, now).value,
+                    status=effective_status(learning, state, now).value,
                     statement=entity.statement,
                     contexts=learning.contexts,
                     entity=entity,

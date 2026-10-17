@@ -17,6 +17,7 @@ from serene.demo.report import verify_report
 from serene.domain.canonical import canonical_json, sha256_hex
 from serene.domain.events import DomainEvent
 from serene.experiments.view import build_experiments_view
+from serene.memory.diff import parse_full_diff
 from serene.memory.view import build_memory_dream_view
 from serene.ports.memory import MemoryDocument
 from serene.projections.investigations import investigations
@@ -29,9 +30,22 @@ REPORT = ROOT / ".demo" / "maya" / "report.json"
 class ReportMemory:
     """The report's memory snapshot, with no write capability."""
 
-    def __init__(self, report: dict[str, Any]) -> None:
-        self.contents: dict[str, str] = report["memory"]
-        self.revision: str = report["memory_head"]
+    def __init__(self, report: dict[str, Any], state: KernelState) -> None:
+        self.contents: dict[str, str] = {}
+        self.revisions: dict[str, str] = {}
+        for patch_id, revision in state.memory_commits.items():
+            patch = state.entities[patch_id].entity
+            diff = parse_full_diff(patch.diff)
+            if diff.path != patch.target_path or diff.pre != self.contents.get(diff.path):
+                raise ValueError("Report memory patch disagrees with its prior content")
+            self.contents[diff.path] = diff.post
+            self.revisions[diff.path] = revision
+        head_revision = next(reversed(state.memory_commits.values()), None)
+        if self.contents != report["memory"] or head_revision != report["memory_head"]:
+            raise ValueError("Report memory disagrees with its committed events")
+        if head_revision is None:
+            raise ValueError("Report memory has no committed revision")
+        self.revision = head_revision
 
     def read(self, path: str) -> MemoryDocument | None:
         content = self.contents.get(path)
@@ -39,7 +53,7 @@ class ReportMemory:
             return None
         return MemoryDocument(
             path=path,
-            revision=self.revision,
+            revision=self.revisions[path],
             content=content,
             content_digest=sha256_hex(content.encode()),
         )
@@ -79,7 +93,7 @@ def build_web_state(report: dict[str, Any]) -> dict[str, Any]:
     if provenance_before is None:
         raise ValueError("Report twin_before matches no ledger position")
     provenance_after = build_twin_provenance(state, events[-1].occurred_at, twin_after)
-    memory = build_memory_dream_view(state, ReportMemory(report)).model_dump(mode="json")
+    memory = build_memory_dream_view(state, ReportMemory(report, state)).model_dump(mode="json")
     if memory["unreadable"]:
         raise ValueError("Report memory is unreadable")
     return {

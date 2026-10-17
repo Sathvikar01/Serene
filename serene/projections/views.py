@@ -87,16 +87,21 @@ def pending_approvals(state: KernelState) -> dict[str, Any]:
 
 
 def active_learnings(state: KernelState) -> dict[str, Any]:
+    from serene.policies.learning import effective_status
+
+    if state.last_recorded_at is None:
+        return {}
     return {
         lrn_id: {
-            "status": record.status.value,
+            "status": status.value,
             "hypothesis_id": record.hypothesis_id,
             "contexts": list(record.contexts),
             "valid_from": format_timestamp(record.valid_from),
             "review_after": format_timestamp(record.review_after),
         }
         for lrn_id, record in sorted(state.learnings.items())
-        if record.status is not LearningStatus.DEPRECATED
+        if (status := effective_status(record, state, state.last_recorded_at))
+        is not LearningStatus.DEPRECATED
     }
 
 
