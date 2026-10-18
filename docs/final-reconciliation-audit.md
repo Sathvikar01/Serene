@@ -45,6 +45,16 @@ Canonical correction authority, tampered-memory rejection and historical Git
 bytes are inherited unchanged from #115. Ask Serene, compact layouts, approval
 controls, keyboard disclosures and the loading animation are inherited from #114.
 
+Independent review found one inherited #114 defect: when the experiments
+projection is unreadable and no question is pending, Today incorrectly says
+“Nothing needs your attention” and hides the existing unreadable-decisions
+warning. The minimal fix renders the warning even with zero known decisions;
+a regression failed before the fix and passes afterward. Valid empty projections
+retain the compact empty state. Maya browser checks now explicitly open Memory
+history, require visible patch/rejection records and all six Dream stages, and
+check the populated story's console. Deliberate missing-artifact non-2xx states
+remain tested separately; page exceptions are captured throughout.
+
 ## Submission claim audit
 
 | Important claim | Classification | Repository evidence and exact boundary |
@@ -82,6 +92,12 @@ controls, keyboard disclosures and the loading animation are inherited from #114
   continue to render canonical fields.
 - README explicitly retains non-atomic publication, unnamed Twin endpoints and
   absence of fresh external validation.
+
+The existing Maya guide is part of the hash-pinned reviewed synthetic corpus.
+An initial explanatory annotation caused two corpus-integrity test failures;
+the guide was restored byte-for-byte. Its historical screenshot is classified
+here and in README instead. No manifest, scorer, protocol or archived result
+was changed to accommodate documentation edits.
 
 ## Genuine limitations retained
 
