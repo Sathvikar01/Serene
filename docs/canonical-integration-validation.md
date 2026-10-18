@@ -76,6 +76,10 @@ The canonical-state audit then reproduced three integration defects:
 - The production shell payload must contain the inline bootstrap text, without
   requiring a client module to resolve inside `head`. Existing clean-console
   browser assertions continue to catch hydration errors.
+- Memory's keyboard provenance check explicitly waits for one patch target
+  after native fragment activation, before the unchanged viewport and status
+  checks. A CI trace caught two transient matches while hydration finished;
+  its final snapshot held one visible article. No duplicate is selected away.
 
 ## Files changed
 
@@ -91,6 +95,7 @@ The canonical-state audit then reproduced three integration defects:
 | `tests/test_memory_projection.py` | Five correction cases and PostgreSQL publication/backfill regression |
 | `tests/test_maya_web_state.py` | Reject tampered memory text/revision receipts |
 | `app/web/e2e/maya-demo.spec.ts` | Compare the summary against canonical backend fields |
+| `app/web/e2e/memory.spec.ts` | Require one provenance target before checking native fragment navigation |
 | `app/web/e2e/causal-twin.spec.ts`, `app/web/e2e/shell.spec.ts` | Exercise viewport cases instead of skipping them; verify the head bootstrap arrives as text |
 | `docs/canonical-integration-validation.md` | Reproduction, verification and integration evidence boundaries |
 
