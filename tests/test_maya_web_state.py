@@ -60,6 +60,20 @@ def test_adapter_rejects_corrupt_or_non_demo_reports(report: dict[str, Any]) -> 
         build_web_state(corrupt)
 
 
+@pytest.mark.parametrize("field", ["memory", "memory_head"])
+def test_adapter_rejects_memory_that_disagrees_with_committed_events(
+    report: dict[str, Any], field: str
+) -> None:
+    corrupt = copy.deepcopy(report)
+    if field == "memory":
+        path = next(iter(corrupt["memory"]))
+        corrupt["memory"][path] += "An unreviewed claim was added outside the ledger.\n"
+    else:
+        corrupt["memory_head"] = "f" * 40
+    with pytest.raises(ValueError, match="memory"):
+        build_web_state(corrupt)
+
+
 def test_adapter_projects_complete_twin_provenance_for_both_twins(report: dict[str, Any]) -> None:
     """Issue #75: every Maya edge, before and after, resolves to raw evidence."""
     from serene.causal.provenance import TwinProvenanceView

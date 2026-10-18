@@ -63,6 +63,9 @@ test("provenance can be followed by keyboard, and back", async ({ page }) => {
   const writtenBy = payload.memories[0].written_by;
   await expect(page).toHaveURL(new RegExp(`#patch-${writtenBy}$`));
   const patch = page.locator(`[data-patch-id="${writtenBy}"]`);
+  // A native fragment link can activate before hydration has finished
+  // replacing the streamed subtree. Require a unique target before checking it.
+  await expect(patch).toHaveCount(1);
   await expect(patch).toBeInViewport();
   await expect(patch).toHaveAttribute("data-status", "COMMITTED");
 

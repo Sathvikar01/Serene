@@ -41,6 +41,7 @@ from serene.domain.values import (
 from serene.lineage.provenance import trace_lineage
 from serene.memory.document import DIRECTORY_KIND, MemoryFormatError, MemoryKind, parse
 from serene.memory.store import MemoryReadView
+from serene.policies.learning import effective_status
 from serene.projections.state import KernelState
 
 VIEW_VERSION: Final = "memory-dream-view/1"
@@ -301,6 +302,10 @@ def build_memory_dream_view(state: KernelState, memory: MemoryReadView) -> Memor
             unreadable.append(UnreadableMemory(path=path, revision=document.revision))
             continue
         front = doc.front
+        learning = state.learnings.get(front.subject)
+        status = front.status
+        if learning is not None and state.last_recorded_at is not None:
+            status = effective_status(learning, state, state.last_recorded_at)
         memories.append(
             MemoryItemView(
                 path=path,
@@ -309,7 +314,7 @@ def build_memory_dream_view(state: KernelState, memory: MemoryReadView) -> Memor
                 body=doc.body,
                 subject=front.subject,
                 level=front.level,
-                status=front.status,
+                status=status,
                 scope=front.scope,
                 valid_from=front.valid_from,
                 review_after=front.review_after,

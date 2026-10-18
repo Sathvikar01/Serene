@@ -19,6 +19,27 @@ async function openNav(page: Page) {
   return page.getByRole("navigation", { name: "Surfaces" });
 }
 
+test("the head bootstrap arrives as script text rather than a client reference", async ({ request }) => {
+  // A client-module export here can suspend the head during hydration and
+  // leave React's cursor inside head when it starts hydrating the body.
+  const response = await request.get("/today", { headers: { RSC: "1" } });
+  expect(response.ok()).toBe(true);
+  const root = (await response.text()).split("\n").find((line) => line.startsWith("0:"));
+  expect(root).toBeDefined();
+  const scripts: unknown[] = [];
+  function visit(value: unknown) {
+    if (Array.isArray(value)) {
+      if (value[1] === "script") scripts.push(value[3]?.dangerouslySetInnerHTML?.__html);
+      value.forEach(visit);
+    } else if (value !== null && typeof value === "object") {
+      Object.values(value).forEach(visit);
+    }
+  }
+  visit(JSON.parse(root!.slice(2)));
+  expect(scripts).toHaveLength(1);
+  expect(scripts[0]).toContain("document.documentElement.dataset.bloom");
+});
+
 test("the landing page opens onto Today, then the bar fills in", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { level: 1, name: "Serene" })).toBeVisible();
@@ -150,7 +171,8 @@ test("every route has one h1, no horizontal overflow and a clean console", async
 test("the menu sheet closes on Escape and gives focus back", async ({ page }) => {
   await page.goto("/experiments");
   const trigger = page.getByRole("button", { name: "Surfaces" });
-  test.skip(!(await trigger.isVisible()), "the inline nav replaces the sheet at this width");
+  if (!(await trigger.isVisible())) await page.setViewportSize({ width: 390, height: 844 });
+  await expect(trigger).toBeVisible();
 
   await trigger.focus();
   await page.keyboard.press("Enter");
