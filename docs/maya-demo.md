@@ -1,5 +1,9 @@
 # Canonical Maya demo (#56)
 
+The committed screenshot is a historical illustration of the fictional story,
+not fresh #114/#115 UI or external-service evidence. Current claim boundaries
+are classified in the [submission evidence audit](final-reconciliation-audit.md).
+
 ## The story in four steps
 
 This is Maya’s fictional family story. Her parent reports that daycare pickup

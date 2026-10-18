@@ -1,5 +1,9 @@
 # Final documentation validation (#60 → #61 → #62)
 
+This is a historical validation receipt for the revisions named below. Its
+unconnected-UI descriptions and test counts are not current integration claims.
+See the [submission evidence audit](final-reconciliation-audit.md).
+
 Initial baseline: `42c82b58c8966f0aada9c382575c811cd93176d1`. Final refreshed
 main: `6b8207300271620e775d33879add3533d59ad992` on 2026-10-12. This includes
 the final controlled-dev/1 evidence in PR #89, completed core docs in PR #90,
