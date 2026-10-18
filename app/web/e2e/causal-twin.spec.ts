@@ -175,8 +175,7 @@ test("zoom and fit-to-view move the map", async ({ page }) => {
   await expect.poll(() => viewportTransform(page)).not.toBe(fitted);
 });
 
-test("on a phone the map reads top to bottom and the panel follows it", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "mobile", "phone layout only");
+test("on a phone the map reads top to bottom and the panel follows it", async ({ page }) => {
   for (const width of [390, 360]) {
     await page.setViewportSize({ width, height: 800 });
     await page.goto(FIXTURE);

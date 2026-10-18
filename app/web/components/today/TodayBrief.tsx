@@ -33,19 +33,15 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
   const learnings = learningsFrom(projections);
   const asked = current?.next_action.kind === "WAIT_FOR_PARENT_ANSWER" ? current : null;
   const needs = (asked ? 1 : 0) + (awaiting?.length ?? 0);
+  const experimentsUnavailable = awaiting === null && !!projections.experiments;
 
   return (
     <div className={styles.today} data-investigations>
       {status}
       <div className={styles.layout}>
         <div className={styles.attention}>
-          {needs === 0 ? <p className={styles.quiet}>Nothing needs your attention.</p> : (
+          {needs === 0 && !experimentsUnavailable ? <p className={styles.quiet}>Nothing needs your attention.</p> : (
           <Side title="Needs you" icon="hand" emphasis={needs > 0}>
-            {needs === 0 ? (
-              <p className={styles.quiet}>
-                {awaiting !== null ? "Nothing is waiting for you right now." : "Serene has not asked you anything."}
-              </p>
-            ) : null}
             {needs > 0 ? (
             <ul className={styles.needs}>
               {asked?.next_action.question ? (
@@ -67,7 +63,7 @@ export function TodayBrief({ current, investigations, projections, status }: Tod
               ))}
             </ul>
             ) : null}
-            {awaiting === null && projections.experiments ? (
+            {experimentsUnavailable ? (
               <p className={styles.quiet}>Experiments could not be read here. Open Experiments to see them.</p>
             ) : null}
           </Side>)}

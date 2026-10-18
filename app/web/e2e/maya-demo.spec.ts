@@ -17,11 +17,15 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   test.setTimeout(600_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
+  const checkConsole = (message: import("@playwright/test").ConsoleMessage) => {
+    if (message.type() === "error" || message.type() === "warning") errors.push(message.text());
+  };
   run("demo_reset");
   await page.goto("/demo/maya");
   const reportAlert = page.getByRole("alert").filter({ hasText: "temporarily unavailable" });
   await expect(reportAlert).toContainText("temporarily unavailable", { timeout: 40_000 });
   run("maya_demo");
+  page.on("console", checkConsole);
   const canonical = report();
   await page.reload();
   await expect(page.getByRole("heading", { name: "A shared summary" })).toBeVisible({ timeout: 40_000 });
@@ -32,6 +36,18 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   const firstHash = state.report_sha256;
   expect(state.twin_after).toEqual(canonical.twin_after);
   expect(state.event_count).toBe(canonical.events.length);
+
+  const summary = page.getByRole("region", { name: "A shared summary" });
+  for (const inv of Object.values(state.investigations) as { question: string }[]) {
+    await expect(summary).toContainText(inv.question);
+  }
+  for (const exp of state.experiments.experiments) {
+    await expect(summary).toContainText(exp.intervention.description);
+    for (const outcome of exp.outcomes) await expect(summary).toContainText(outcome.summary);
+  }
+  for (const edge of state.twin_after.edges.filter((e: { status: string }) => e.status === "CANDIDATE")) {
+    await expect(summary).toContainText(edge.relationship);
+  }
 
   await expect(page.getByRole("heading", { name: "Maya’s pickup story", exact: true })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Demo mode" })).toHaveCount(0);
@@ -76,11 +92,18 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   await expect(card.getByRole("region", { name: "Approval", exact: true })).toContainText("Telegram");
   await expect(card.locator("[data-result]")).toContainText(experiment.outcomes[0].summary);
   await expect(page.locator("#demo-experiment li[data-promotion]")).toHaveCount(state.promotions.length);
+  await page.locator("#demo-memory summary").filter({ hasText: /^Memory history/ }).click();
+  await expect(page.locator("#demo-memory [data-stage]")).toHaveCount(6);
   for (const patch of state.memory.patches) {
     const item = page.locator(`[data-patch-id="${patch.patch_id}"]`);
+    await expect(item).toBeVisible();
     await expect(item).toHaveAttribute("data-status", patch.status);
     await expect(item).toContainText(patch.target_path);
-    for (const reason of patch.rejection_reasons) await expect(item.locator(`[data-reason-code="${reason}"]`)).toHaveCount(1);
+    for (const reason of patch.rejection_reasons) {
+      const shownReason = item.locator(`[data-reason-code="${reason}"]`);
+      await expect(shownReason).toHaveCount(1);
+      await expect(shownReason).toBeVisible();
+    }
   }
   await expect(page.locator("#demo-memory")).toContainText(state.memory.memories[0].body);
   await page.getByText("Explore how the explanations changed", { exact: true }).click();
@@ -114,11 +137,15 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: testInfo.outputPath("maya-desktop.png"), fullPage: true });
 
+  // Missing artifacts deliberately return a handled non-2xx response; the
+  // populated story and regeneration must have a clean console.
+  page.off("console", checkConsole);
   run("demo_reset");
   await page.reload();
   await expect(reportAlert).toBeVisible({ timeout: 40_000 });
   await expect(page.locator("[data-experiment-id]")).toHaveCount(0);
   run("maya_demo");
+  page.on("console", checkConsole);
   await page.reload();
   await expect(page.getByRole("heading", { name: "A shared summary" })).toBeVisible({ timeout: 40_000 });
   const regeneratedApi = await request.get("/demo/maya/state");
