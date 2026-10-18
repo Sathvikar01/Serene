@@ -33,6 +33,18 @@ test("canonical reset → Maya → report → rendered UI, then regeneration wit
   expect(state.twin_after).toEqual(canonical.twin_after);
   expect(state.event_count).toBe(canonical.events.length);
 
+  const summary = page.getByRole("region", { name: "A shared summary" });
+  for (const inv of Object.values(state.investigations) as { question: string }[]) {
+    await expect(summary).toContainText(inv.question);
+  }
+  for (const exp of state.experiments.experiments) {
+    await expect(summary).toContainText(exp.intervention.description);
+    for (const outcome of exp.outcomes) await expect(summary).toContainText(outcome.summary);
+  }
+  for (const edge of state.twin_after.edges.filter((e: { status: string }) => e.status === "CANDIDATE")) {
+    await expect(summary).toContainText(edge.relationship);
+  }
+
   await expect(page.getByRole("heading", { name: "Maya’s pickup story", exact: true })).toBeVisible();
   await expect(page.getByRole("complementary", { name: "Demo mode" })).toHaveCount(0);
   await expect(page.getByText("For parents, caregivers, teachers, and clinicians")).toBeVisible();

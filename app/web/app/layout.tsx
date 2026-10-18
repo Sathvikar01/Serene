@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import type { ReactNode } from "react";
-import { BLOOM_SCRIPT, BloomDirector } from "@/components/brand/BloomDirector";
+import { BloomDirector } from "@/components/brand/BloomDirector";
 import { PETAL_SRC } from "@/components/brand/Hellebore";
 import { FamilyRecordProvider } from "@/components/session/FamilyRecord";
 import { AppShell } from "@/components/shell/AppShell";
@@ -35,6 +35,11 @@ export const viewport: Viewport = {
   colorScheme: "light",
   themeColor: "#e0dfd8",
 };
+
+// Keep the head bootstrap server-owned. Importing this value from a client
+// module makes it a Flight reference and can suspend head during hydration.
+// Without scripts nothing is marked and the flowers are simply open.
+const BLOOM_SCRIPT = `if(location.pathname==="/")document.documentElement.dataset.bloom="play"`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

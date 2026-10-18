@@ -12,7 +12,7 @@ import styles from "./demo.module.css";
 
 const CHAPTERS = [
   { id: "demo-today", title: "Follow the clues", detail: "What Maya’s family reported and what evidence adds" },
-  { id: "demo-experiment", title: "Try one small change", detail: "A parent-approved pickup trial" },
+  { id: "demo-experiment", title: "Try one small change", detail: "The trial and its approval record" },
   { id: "demo-memory", title: "Keep a useful lesson", detail: "What may help this family, and what we still can’t say" },
   { id: "demo-twin", title: "Compare the explanations", detail: "What changed, and what remains uncertain" },
 ];
@@ -56,6 +56,10 @@ export function MayaDemoView() {
   useEffect(() => { void reload(); }, []);
 
   const investigations = state && checkpoint >= 0 ? state.snapshots[checkpoint].investigations : state?.investigations;
+  const trials = state?.experiments.experiments ?? [];
+  const outcomes = trials.flatMap((trial) => trial.outcomes);
+  const learnings = state?.memory.memories.filter((memory) => memory.kind === "learning") ?? [];
+  const candidates = state?.twinAfter.edges.filter((edge) => edge.status === "CANDIDATE") ?? [];
   return <div className={styles.demo}>
     {loading && <SurfaceLoading label="Loading Maya’s story" compact />}
     {error && <div role="alert"><h2>This example is temporarily unavailable</h2><p>Please refresh the page later.</p></div>}
@@ -65,10 +69,10 @@ export function MayaDemoView() {
         <h2 id="shared-summary">A shared summary</h2>
         <p className={styles.overviewLead}>Use this example to see what was reported, what was tried and what the result can—and cannot—tell us. It is a conversation aid, not a diagnosis.</p>
         <dl className={styles.takeaways}>
-          <div><dt>What was reported</dt><dd>Maya’s parent reported difficult daycare pickups.</dd></div>
-          <div><dt>What was tried</dt><dd>Her parent approved a five-minute warning before leaving daycare.</dd></div>
-          <div><dt>What the result suggests</dt><dd>Her parent reported calmer pickups on most days with the warning. A difficult transition may matter in this situation.</dd></div>
-          <div><dt>What remains uncertain</dt><dd>Fatigue and hunger are still possible. This one example cannot explain other children or situations.</dd></div>
+          <div><dt>What was investigated</dt><dd>{state.investigations.map((inv) => <p key={inv.investigation_id}>{inv.question}</p>)}</dd></div>
+          <div><dt>The trial record</dt><dd>{trials.map((trial) => <p key={trial.experiment_id}>{trial.intervention.description} Approval: {trial.approval?.state.toLowerCase().replaceAll("_", " ") ?? "not requested"}. Stage: {trial.phase.toLowerCase().replaceAll("_", " ")}.</p>)}</dd></div>
+          <div><dt>What was noticed</dt><dd>{outcomes.length ? outcomes.map((outcome) => <p key={outcome.outcome_id}>{outcome.summary}</p>) : "No outcome has been recorded."}</dd></div>
+          <div><dt>What remains uncertain</dt><dd>{candidates.map((edge) => <p key={edge.edge_id}>{edge.relationship}</p>)}This scoped example cannot explain other children or situations.</dd></div>
         </dl>
         <p className={styles.summaryNote}>Parents decide what to try; caregivers, teachers and clinicians can bring their observations and context.</p>
       </section>
@@ -82,24 +86,25 @@ export function MayaDemoView() {
       <section id="demo-today" className={styles.section} aria-labelledby="chapter-clues">
         <p className={styles.step}>Chapter 1</p>
         <h2 id="chapter-clues">Follow the clues</h2>
-        <p className={styles.explainer}>Three explanations remain in play: tiredness, hunger, or a difficult transition. Serene asks for relevant evidence and checks whether its source is trustworthy. A checked source does not prove which explanation is right.</p>
+        <p className={styles.explainer}>Serene keeps competing explanations visible, asks for relevant evidence and checks whether its source is trustworthy. A checked source does not prove which explanation is right.</p>
         <div className={styles.detailDisclosure}>
           <h3>See how Serene reviewed the story</h3>
           <label className={styles.checkpoint}>Choose a moment in the story <select value={checkpoint} onChange={(e) => setCheckpoint(Number(e.target.value))}>
             <option value={-1}>Latest recorded moment</option>
             {state.snapshots.map((s, i) => <option key={s.sequence} value={i}>Step {i + 1} of {state.snapshots.length} — {checkpointLabel(s.investigations[0]?.phase ?? "")}</option>)}
           </select></label>
-          <p className={styles.hint}>Choose an earlier moment to see what Serene knew then. Each moment comes from the same recorded story.</p>
+          <p className={styles.hint}>Choose an earlier moment to see that investigation stage. The summary and later chapters show the latest saved record.</p>
           {investigations?.map((inv) => <div key={inv.investigation_id}><InvestigationDetail investigation={inv} variant="brief" /></div>)}
         </div>
       </section>
       <section id="demo-experiment" className={styles.section} aria-labelledby="chapter-trial">
         <p className={styles.step}>Chapter 2</p>
         <h2 id="chapter-trial">Try one small change</h2>
-        <p className={styles.explainer}>Before anything changed, a parent approved a reversible trial: give a five-minute warning before leaving daycare. The example below shows what changed and what the parent noticed afterward.</p>
+        <p className={styles.explainer}>The saved trial record shows the proposed change, its safety classification, the parent’s decision and any recorded outcome.</p>
         <div className={styles.takeaway}>
           <strong>What the parent noticed</strong>
-          <p>Pickups were calmer on most days with the five-minute warning. That is encouraging for this family, but it does not prove the warning will help every child.</p>
+          {outcomes.length ? outcomes.map((outcome) => <p key={outcome.outcome_id}>{outcome.summary}</p>) : <p>No outcome has been recorded.</p>}
+          <p>A family’s reported outcome does not establish a result for every child.</p>
         </div>
         <details className={styles.detailDisclosure} open>
           <summary>See the trial record</summary>
@@ -116,12 +121,12 @@ export function MayaDemoView() {
       <section id="demo-memory" className={styles.section} aria-labelledby="chapter-memory">
         <p className={styles.step}>Chapter 3</p>
         <h2 id="chapter-memory">Keep a useful lesson</h2>
-        <p className={styles.explainer}>The example keeps a small lesson about daycare pickup and sets aside a broader claim about every child. Serene checks what supports a lesson before adding it to memory.</p>
+        <p className={styles.explainer}>Serene checks what supports a lesson before adding it to memory. The record below keeps the reviewed lesson and explains any refused changes.</p>
         <div className={styles.takeaway}>
           <strong>The lesson kept</strong>
-          <p>A five-minute heads-up may help with weekday daycare pickup. Serene keeps that lesson tied to this situation and the dates it was observed.</p>
+          {learnings.length ? learnings.map((memory) => <p key={memory.path}>{memory.body} Status: {memory.status.toLowerCase().replaceAll("_", " ")}.</p>) : <p>No reviewed learning is saved.</p>}
           <strong>The claim set aside</strong>
-          <p>There is not enough evidence to say that every difficult transition has the same cause.</p>
+          {state.memory.patches.filter((patch) => patch.status === "REJECTED").map((patch) => <p key={patch.patch_id}>{patch.rationale} Refused: {patch.rejection_reasons.join(", ")}.</p>)}
         </div>
         <details className={styles.detailDisclosure} open>
           <summary>See what Serene kept and why</summary>
@@ -131,10 +136,10 @@ export function MayaDemoView() {
       <section id="demo-twin" className={styles.section} aria-labelledby="chapter-compare">
         <p className={styles.step}>Chapter 4</p>
         <h2 id="chapter-compare">Compare the explanations</h2>
-        <p className={styles.explainer}>The trial added support to the idea that transitions can make daycare pickup harder. Fatigue and hunger remain possible, but untested. Compare the two views to see which ideas gained support and which remain open.</p>
+        <p className={styles.explainer}>Compare the recorded views to see which explanations gained support and which remain open. Each relationship keeps its scope and evidence trail.</p>
         <div className={styles.takeaway}>
-          <strong>More support after the trial</strong>
-          <p>The warning is linked with calmer pickups in this example. Tiredness and hunger are still possible explanations; this story did not test them.</p>
+          <strong>The recorded relationships</strong>
+          {state.twinAfter.edges.map((edge) => <p key={edge.edge_id}>{edge.relationship} — {edge.status.toLowerCase()}.</p>)}
         </div>
         <details className={styles.detailDisclosure}>
           <summary>Explore how the explanations changed</summary>
