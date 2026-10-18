@@ -6,12 +6,6 @@ import { useEffect } from "react";
 // after.
 const BLOOM_MS = 3800;
 
-// Runs in <head> before first paint, so the page never flashes fully drawn
-// and then restarts. The bloom is the landing page's alone: it plays on every
-// fresh load of "/", and never on a surface. Without scripts nothing is
-// marked and the flowers are simply open.
-export const BLOOM_SCRIPT = `if(location.pathname==="/")document.documentElement.dataset.bloom="play"`;
-
 // Ends the intro: on schedule, or at once when the visitor presses, types or
 // scrolls, so nobody has to wait through it.
 export function BloomDirector() {

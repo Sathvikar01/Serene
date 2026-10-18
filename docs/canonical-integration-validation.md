@@ -1,4 +1,4 @@
-# Canonical integration verification — 17 October 2026
+# Canonical integration verification — 17–18 October 2026
 
 Started from freshly fetched `origin/main` at `d90c227` in an isolated worktree,
 after reading `CLAUDE.md`, `AGENTS.md`, architecture, runtime, evidence, safety,
@@ -24,8 +24,20 @@ An initial overlapping build attempt lost `.next/server/pages-manifest.json`.
 This was an execution mistake, not an application root cause; the isolated build
 passed. The private-stdin regression's two cases passed in isolation without
 changing its timeout, implementation or evaluation protocol. The mobile Twin
-check also passed three isolated production repetitions. Neither transient is
-claimed to have a proven product fix.
+check also passed three isolated production repetitions. The stdin timeout did
+not recur in the complete final backend suite (1,481 passed, one existing
+Windows symlink-permission skip); no domain rule or timeout was changed.
+
+Full browser diagnostics later captured React expecting the AppShell `div`
+while its hydration cursor was at `head > meta`. RootLayout imported
+`BLOOM_SCRIPT` from a `"use client"` module: the Flight payload supplied `"$2"`
+as the inline script rather than script text. A late module can suspend `head`
+and trigger React's singleton cursor replay bug
+([upstream reproduction](https://github.com/react/react/issues/37551)). The
+bootstrap constant now lives in the server layout; its behavior is identical
+and the head no longer depends on that client export. A production HTTP
+regression failed before the fix with `Received string: "$2"` and requires
+the bootstrap text in the initial Flight payload.
 
 The canonical-state audit then reproduced three integration defects:
 
@@ -61,12 +73,16 @@ The canonical-state audit then reproduced three integration defects:
 - The three existing viewport skips are removed: phone-map checks explicitly
   select phone widths, and the menu test resizes when the inline nav is shown.
   No assertion is weakened and no sleep or production test branch is added.
+- The production shell payload must contain the inline bootstrap text, without
+  requiring a client module to resolve inside `head`. Existing clean-console
+  browser assertions continue to catch hydration errors.
 
 ## Files changed
 
 | Path | Change |
 | --- | --- |
 | `app/web/app/demo/maya/MayaDemoView.tsx` | Render summaries from validated domain views and clarify checkpoint scope |
+| `app/web/app/layout.tsx`, `app/web/components/brand/BloomDirector.tsx` | Keep the inline head bootstrap server-owned to avoid a hydration race |
 | `scripts/maya_web_state.py` | Bind report memory text and per-file revisions to committed patch events |
 | `serene/memory/view.py` | Derive current learning status from canonical validity policy |
 | `serene/projections/memory.py` | Remove the conflicting date-only status override |
@@ -75,7 +91,7 @@ The canonical-state audit then reproduced three integration defects:
 | `tests/test_memory_projection.py` | Five correction cases and PostgreSQL publication/backfill regression |
 | `tests/test_maya_web_state.py` | Reject tampered memory text/revision receipts |
 | `app/web/e2e/maya-demo.spec.ts` | Compare the summary against canonical backend fields |
-| `app/web/e2e/causal-twin.spec.ts`, `app/web/e2e/shell.spec.ts` | Exercise viewport cases instead of skipping them |
+| `app/web/e2e/causal-twin.spec.ts`, `app/web/e2e/shell.spec.ts` | Exercise viewport cases instead of skipping them; verify the head bootstrap arrives as text |
 | `docs/canonical-integration-validation.md` | Reproduction, verification and integration evidence boundaries |
 
 ## Verification commands
