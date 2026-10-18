@@ -1,0 +1,209 @@
+{
+  "schema": "serene-reconciliation-evidence/1",
+  "date": "2026-10-18",
+  "main": "d90c227d542ceaef7660c33e01d5d674b3901170",
+  "pr114": "e0608222f5eab92ed17a8d8d4acd8066ab27bae8",
+  "pr115": "e4586b4e41a0ec7d7374d58482efb7cd0f8da310",
+  "testedCode": "347de41b762f4583b43437650003f3222001fe34",
+  "ci": "https://github.com/Sathvikar01/Serene/actions/runs/39143698879",
+  "environment": {
+    "ci": "Ubuntu; Python 3.11; Node 20; Chromium; disposable PostgreSQL 17",
+    "local": "Windows; Python 3.11.15; Node 24.14.1; normal production build; Chromium"
+  },
+  "gates": {
+    "typecheck": "PASS",
+    "unit": {
+      "passed": 287,
+      "files": 44
+    },
+    "build": "PASS",
+    "browser": {
+      "passed": 166,
+      "skipped": 0
+    },
+    "approvals": {
+      "passed": 2,
+      "boundary": "real PostgreSQL; synthetic Auth/PostgREST and controlled WebSocket delivery"
+    },
+    "twin": {
+      "passed": 1,
+      "boundary": "real PostgreSQL/RLS; synthetic Auth/PostgREST and controlled WebSocket delivery"
+    },
+    "ruff": "PASS",
+    "format": {
+      "result": "PASS",
+      "files": 303
+    },
+    "mypy": {
+      "result": "PASS",
+      "files": 108
+    },
+    "pytest": {
+      "passed": 1480,
+      "skipped": 2,
+      "skipReason": "pre-existing Windows-specific private-pipe checks on Linux",
+      "warnings": 4
+    },
+    "inspect": {
+      "kernel": "5/5 CORRECT",
+      "trust": "9/9 CORRECT",
+      "runtime": "6/6 CORRECT"
+    },
+    "core": "10/10 PASS",
+    "ledger": {
+      "events": 25,
+      "chainValid": true,
+      "replayIdentical": true,
+      "tamperDetected": true
+    },
+    "secrets": {
+      "findings": 0
+    },
+    "supplemental": {
+      "environmentFindings": 0,
+      "syntheticFindings": 0,
+      "reviewedSyntheticAssets": 97,
+      "docsReferences": 383,
+      "docsFailures": 0,
+      "economics": "reproduced; assumptions only"
+    }
+  },
+  "manual": {
+    "normalBuild": true,
+    "fixtureRoutes": false,
+    "modelBrowserTelegramIO": "SYNTHETIC",
+    "reportHash": "4000dac552cca6086d39e352795c2a2c79a0bedc69c823247a08c47173e12c7e",
+    "events": 63,
+    "checks": [
+      {
+        "check": "fresh canonical report and summary loaded",
+        "events": 63,
+        "hash": "4000dac552cca6086d39e352795c2a2c79a0bedc69c823247a08c47173e12c7e"
+      },
+      {
+        "check": "canonical evidence, waiting checkpoint, approval and outcome",
+        "result": "PASS",
+        "ledgerHead": "9926d731253feeca4fa2622c56196f157ecb02330923d478871bf9dd8a95bef9"
+      },
+      {
+        "check": "Memory, six Dream stages, committed/refused patches and unique keyboard provenance targets",
+        "result": "PASS",
+        "links": [
+          "#patch-mpt_d80189db1cacf81c04dc6791c15368b5",
+          "#memory-learnings-maya-pickup-md-lrn_ce9218ae573e53c83362097409a14d48",
+          "#memory-learnings-maya-pickup-md-evd_274fbd600b88bb0d4cb12641b6845ec9",
+          "#memory-learnings-maya-pickup-md-evd_58098b9c3811312083c74a7257d13f6b",
+          "#memory-learnings-maya-pickup-md-evd_7335d6aad46733e4db58e862945f8db8",
+          "#memory-learnings-maya-pickup-md-evd_7d0e8394e75f9423e29912bf3466c86b",
+          "#memory-learnings-maya-pickup-md-evd_a26630384cacf7a4ea64ef3205c5e359",
+          "#memory-learnings-maya-pickup-md-hyp_e27bfef206d0122bf2e62e2962ea2e52",
+          "#memory-learnings-maya-pickup-md-exp_b45059a34255315812520b67efabd736",
+          "#memory-learnings-maya-pickup-md-out_d3f8c7e809bdee32a81c72b9c2dafee9",
+          "#memory-learnings-maya-pickup-md-pat_45dcf3b7257aaa1fc74b834ee312c4f7",
+          "#memory-learnings-maya-pickup-md-obs_6da58d9e9548e824155717664881544e",
+          "#memory-learnings-maya-pickup-md-obs_9791f6d888bbf832fa0188f8eb73bb62",
+          "#memory-learnings-maya-pickup-md-obs_84f93e02048555d027c9b898ae7ab30d",
+          "#memory-learnings-maya-pickup-md-evd_7335d6aad46733e4db58e862945f8db8",
+          "#memory-learnings-maya-pickup-md-evd_274fbd600b88bb0d4cb12641b6845ec9",
+          "#memory-learnings-maya-pickup-md-evd_58098b9c3811312083c74a7257d13f6b",
+          "#memory-learnings-maya-pickup-md-evd_7d0e8394e75f9423e29912bf3466c86b",
+          "#memory-learnings-maya-pickup-md-evd_a26630384cacf7a4ea64ef3205c5e359",
+          "#memory-learnings-maya-pickup-md-hyp_e27bfef206d0122bf2e62e2962ea2e52",
+          "#memory-learnings-maya-pickup-md-obs_b6a3814e1fbeb07d42d529ab14d9dcc7",
+          "#memory-learnings-maya-pickup-md-obs_3e149ee2861987ba62b837adde8269ec"
+        ],
+        "revision": "a811431e499a46cceb1ba8217c114c78e34e0c68"
+      },
+      {
+        "check": "truthful pre/post Twin and full outcome/experiment/raw-evidence provenance",
+        "result": "PASS",
+        "beforeTested": 0,
+        "afterTested": 1
+      },
+      {
+        "check": "responsive Maya at 1440,768,390,320 without horizontal overflow",
+        "result": "PASS"
+      },
+      {
+        "check": "required approvals initially open; blocked status visible",
+        "result": "PASS",
+        "pending": 2,
+        "blocked": 1,
+        "boundary": "separate synthetic sample tour"
+      },
+      {
+        "check": "demo OFF today contains no fabricated family data",
+        "result": "PASS"
+      },
+      {
+        "check": "demo OFF investigations contains no fabricated family data",
+        "result": "PASS"
+      },
+      {
+        "check": "demo OFF experiments contains no fabricated family data",
+        "result": "PASS"
+      },
+      {
+        "check": "demo OFF memory contains no fabricated family data",
+        "result": "PASS"
+      },
+      {
+        "check": "demo OFF causal-twin contains no fabricated family data",
+        "result": "PASS"
+      },
+      {
+        "check": "demo OFF Today unique empty state and canonical Maya state endpoint disabled",
+        "result": "PASS",
+        "stateStatus": 404,
+        "pageBoundary": "Next streamed not-found shell returns HTTP 200 with not-found content"
+      },
+      {
+        "check": "tampered memory is refused; stale canonical summary/trials are cleared",
+        "result": "PASS",
+        "status": 503,
+        "expectedConsole": [
+          "Failed to load resource: the server responded with a status of 503 (Service Unavailable)"
+        ]
+      }
+    ],
+    "correction": {
+      "boundary": "Manual real-ledger correction on a separate fresh synthetic Maya instance; canonical demo artifact unchanged",
+      "before": "ACTIVE",
+      "memory": "NEEDS_REVIEW",
+      "published": "NEEDS_REVIEW",
+      "retrieved_belief": "NEEDS_REVIEW",
+      "twin_learning": "NEEDS_REVIEW",
+      "twin_status": "SUPERSEDED",
+      "git_revision_unchanged": "a811431e499a46cceb1ba8217c114c78e34e0c68",
+      "historical_bytes_unchanged": true,
+      "hash_chain_valid": true
+    },
+    "populatedConsoleIssues": [],
+    "demoOffConsoleIssues": [],
+    "expectedNegativeBoundary": "tampered/absent report causes handled 503 and browser failed-resource diagnostic; this is not counted as a clean populated page"
+  },
+  "attemptsNotCountedAsPasses": [
+    {
+      "ci": "https://github.com/Sathvikar01/Serene/actions/runs/39142364485",
+      "result": "FAIL",
+      "reason": "two synthetic-corpus integrity checks rejected an annotation to the pinned Maya guide; exact guide bytes restored, manifest unchanged"
+    },
+    {
+      "local": "full pytest",
+      "result": "INCOMPLETE",
+      "reason": "stopped own processes under severe host memory pressure"
+    },
+    {
+      "local": "full npm test -- --maxWorkers=1",
+      "result": "INCOMPLETE_WITH_FAILURE",
+      "reason": "partial run reported a test timeout under memory pressure; stopped own process, no assertion/deadline changed"
+    },
+    {
+      "local": "TodayBrief regression before fix",
+      "result": "EXPECTED_FAIL",
+      "reason": "unreadable experiments warning absent; after fix both regression cases pass"
+    }
+  ],
+  "externalFreshness": "No fresh provider, hosted Supabase, NeatLogs export or cfo.ai scenario run; prior receipts retain their dates",
+  "holdout": "not run; evaluation fixtures/scorers/results unchanged"
+}

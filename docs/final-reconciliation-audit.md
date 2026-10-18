@@ -112,6 +112,102 @@ historical sponsor usage do not remove these limitations.
 
 ## Fresh regression and manual receipts
 
-The execution record will be completed after all requested gates and the normal
-production Maya browser review finish. Until then this document is an audit in
-progress, not a passing integration certificate.
+All four required jobs passed on the clean integrated checkout at
+`347de41b762f4583b43437650003f3222001fe34`:
+[CI run 39143698879](https://github.com/Sathvikar01/Serene/actions/runs/39143698879).
+The [sanitized machine-readable receipt](reconciliation-evidence.json) records
+the input heads, environment, results, manual checks and failed/incomplete attempts.
+Commands are the unchanged [CI workflow](../.github/workflows/ci.yml); run web
+commands in `app/web`, Python commands at repository root.
+
+| Requested gate | Complete fresh result |
+| --- | --- |
+| `npm run typecheck` | PASS |
+| `npm test` | 287 passed, 44 files |
+| `npm run build` | PASS; also a separate normal Windows production build without fixture routes |
+| `npm run test:e2e` | 166 passed, zero skipped |
+| `npm run test:e2e:approvals` | 2 passed; real disposable PostgreSQL, synthetic Auth/PostgREST and controlled WS delivery |
+| `SERENE_E2E_SKIP_BUILD=1 npm run test:e2e:twin` | 1 passed; real PostgreSQL/RLS, same synthetic transport boundary |
+| `uv run ruff check .` | PASS |
+| `uv run ruff format --check .` | PASS; 303 files |
+| `uv run mypy` | PASS; 108 source files |
+| `uv run pytest` | 1,480 passed, two pre-existing Windows-specific pipe checks skipped on Linux, four dependency deprecation warnings |
+| Inspect kernel/trust/runtime tasks + `scripts/inspect_gate.py` | 5/5 + 9/9 + 6/6 CORRECT; 20/20 total |
+| Inspect core task + `eval/runners/core_scenarios_report.py` | 10/10 PASS |
+| `uv run python scripts/ledger_selfcheck.py` | 25 events; valid chain, identical replay, tamper detected |
+| `uv run python scripts/secret_scan.py` | Zero findings |
+| Supplemental local env/synthetic/docs/economics checks | Zero env findings; 97 reviewed assets, zero synthetic findings; 383 references, zero docs failures; assumed economics reproduced |
+
+Initial CI failed two corpus-integrity checks because this audit annotated the
+hash-pinned Maya guide. Restoring its original bytes fixed the cause; the manifest
+and tests were not changed. A local full pytest attempt was stopped under severe
+memory pressure. A partial local web-unit run reported a timeout before it was
+stopped. Neither attempt is counted as a pass; the complete clean CI results
+above are the full-suite receipts. Today's unavailable-decision regression was
+observed failing before its fix and both focused cases pass after the fix.
+
+No browser test skip, assertion weakening, arbitrary sleep, production test
+branch, evaluator/fixture/scorer change or holdout execution was introduced.
+
+### Manual Maya review
+
+Fresh reset and generation: 18/18, 63 events, canonical domain hash
+`4000dac552cca6086d39e352795c2a2c79a0bedc69c823247a08c47173e12c7e`.
+An ordinary production build, with fixture routes disabled and demo mode enabled,
+served the real local artifact. No API interception or fixture route was used.
+
+- Summary matches persisted question, intervention, approval, outcome and candidate
+  alternatives. Accepted/rejected evidence remains available, including the retained
+  `EXCERPT_NOT_ON_SOURCE` rejection. Earlier investigation checkpoint shows the
+  parent question; the latest checkpoint returns to the completed investigation.
+- Completed trial shows granted Telegram approval and the recorded outcome.
+  Memory status/body and Git revision match canonical state; all six Dream stages
+  and visible committed/refused patches were inspected. All 22 memory provenance
+  links were followed with Enter and have one target in the viewport.
+- Supported Twin opens full experiment/outcome/raw-evidence provenance with no
+  missing nodes. The saved pre-trial view has no tested edge or experiment; the
+  post-trial view restores the tested relationship. Candidate alternatives remain.
+- At 1440, 768, 390 and 320 px, the Maya story has no horizontal overflow.
+  Required approval details are initially open and blocked headers visible in the
+  separate explicitly synthetic sample tour (two pending cards, one blocked card).
+- A separate fresh Maya instance received an admitted hypothesis supersession:
+  direct Memory, published Memory, retrieved belief and Twin learning validity
+  agree on `NEEDS_REVIEW`; the edge is `SUPERSEDED`. Original Git bytes and revision
+  `a811431e499a46cceb1ba8217c114c78e34e0c68` remain unchanged and the chain is valid.
+  This is a direct canonical-state check, not an invented UI correction editor.
+- Temporarily altered report memory was refused with HTTP 503. The browser cleared
+  old summary/trial data and showed the unavailable state. The original artifact
+  was restored byte-for-byte and reloaded successfully. This deliberate negative
+  case emits the expected failed-resource diagnostic; populated/restored pages have
+  zero console warnings/errors and no page exceptions or hydration errors.
+- The same build with demo mode OFF shows no family data on Today, Investigations,
+  Experiments, Memory or Twin. The canonical Maya state endpoint returns 404.
+  Transient streamed duplicate DOM was allowed to settle to one target; no duplicate
+  was selected away and no browser assertion was changed to accept duplicates.
+
+Local screenshots/logs are retained separately under
+`reconciliation-evidence-20261018/` beside this worktree. Committed older media
+remain historical illustrations. The complete reset/regeneration journey also
+passes in the 166-test CI browser suite.
+
+## Changed files and delivery
+
+Beyond the existing PR changes, the narrow fixes/evidence work touches
+`app/web/components/today/TodayBrief.tsx`, its new regression test,
+`app/web/e2e/maya-demo.spec.ts`, `app/web/app/demo/maya/page.tsx`, README,
+`docs/final-docs-validation.md`, this audit and its JSON receipt. The Maya view
+conflict resolution preserves both PR intents. Other overlap files require no
+additional repair beyond the semantic merge described above. The hash-pinned
+Maya guide, synthetic manifest, CI workflow and all evaluation artifacts have no
+net changes from main.
+
+One focused [integration PR #116](https://github.com/Sathvikar01/Serene/pull/116)
+targets #114 and contains #115 plus the necessary reconciliations and evidence
+corrections. A follow-up is required because of the Maya conflict and the hidden
+unreadable-decision warning; it is not a presentation redesign.
+
+Recommended order after human review: merge #115 to main; merge #116 into #114
+to supply the verified reconciliation; then merge the reconciled #114 to main.
+Git history must preserve the #115 ancestry (or be reconciled again if squashed),
+and the final #114 head must pass required CI against updated main. No PR was
+merged by this audit, and #67 remains closed/unmerged.
