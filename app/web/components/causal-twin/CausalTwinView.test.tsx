@@ -99,9 +99,7 @@ describe("CausalTwinView with a twin", () => {
         renderEdgeDetail={(edge) => <p data-testid="detail">{edge.edge_id}</p>}
       />,
     );
-    expect(screen.getByRole("complementary", { name: "Selected link" })).not.toHaveAttribute(
-      "data-selected-edge-id",
-    );
+    expect(screen.queryByRole("complementary", { name: "Selected link" })).not.toBeInTheDocument();
 
     await user.click(mapLabel(container, HYP(4)));
     expect(onChange).toHaveBeenLastCalledWith(HYP(4));

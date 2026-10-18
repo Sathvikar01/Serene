@@ -14,8 +14,8 @@
 
 .canvas {
   position: relative;
-  height: min(38rem, 72svh);
-  min-height: 22rem;
+  height: min(28rem, 55svh);
+  min-height: 20rem;
   overflow: hidden;
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-lg);

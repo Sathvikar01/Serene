@@ -43,6 +43,8 @@ test("Memory/Dream updates only from the scoped published projection", async ({ 
     columns: [], record: row, old_record: {}, errors: [],
   } }]));
   await expect(page.locator("[data-memory-path]")).toHaveCount(1);
+  // The revision lives in the collapsed memory history; open it as a parent would.
+  await page.locator("summary", { hasText: "Memory history" }).click();
   await expect(page.getByText(row.state.memory_head, { exact: true })).toBeVisible();
   await expect(page.locator('[data-status="REJECTED"]')).toContainText("Not enough evidence");
   await expect(page.locator('[data-status="COMMITTED"]')).toContainText("Kept");

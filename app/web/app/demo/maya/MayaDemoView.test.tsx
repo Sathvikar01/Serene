@@ -4,11 +4,11 @@ import { MayaDemoView } from "./MayaDemoView";
 
 afterEach(() => vi.unstubAllGlobals());
 
-it("labels the fictional example and explains when it is unavailable", async () => {
+it("omits the demo notice and explains when the story is unavailable", async () => {
   const fetch = vi.fn().mockResolvedValue({ ok: false });
   vi.stubGlobal("fetch", fetch);
   render(<MayaDemoView />);
-  expect(screen.getByText("A made-up example")).toBeVisible();
+  expect(screen.queryByText("A made-up example")).not.toBeInTheDocument();
   expect(await screen.findByRole("alert")).toHaveTextContent("temporarily unavailable");
   expect(document.querySelector("[data-experiment-id]")).not.toBeInTheDocument();
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));

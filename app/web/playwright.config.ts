@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = 3100;
+const PORT = Number(process.env.SERENE_E2E_PORT ?? 3100);
 
 // Runs against a production build. The dedicated Maya project runs the real
 // canonical offline scripts and the opt-in local adapter; no external services.
@@ -43,7 +43,7 @@ export default defineConfig({
     // remain in their normal signed-out state for the shell acceptance suite.
     env: { SERENE_FIXTURE_ROUTES: "1" },
     url: `http://127.0.0.1:${PORT}/today`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });

@@ -1,3 +1,5 @@
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
+import { Disclosure } from "@/components/layout/Disclosure";
 import { useId, type ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { LineMark, type Certainty } from "@/components/notation/LineMark";
@@ -54,12 +56,7 @@ export function ExperimentsView({ source, decide = null, retry }: ExperimentsVie
       );
     case "loading":
       return (
-        <div className={styles.loading} role="status">
-          <span className="visually-hidden">Loading experiments</span>
-          <LineMark certainty="unknown" />
-          <LineMark certainty="unknown" />
-          <LineMark certainty="unknown" />
-        </div>
+        <SurfaceLoading label="Loading experiments" compact />
       );
     case "error":
       return (
@@ -83,12 +80,21 @@ export function ExperimentsView({ source, decide = null, retry }: ExperimentsVie
 }
 
 function Experiments({ view, decide }: { view: View; decide: ApprovalTransport | null }) {
+  const indexId = useId();
   return (
     <div className={styles.experiments} data-experiments>
+      <nav className={styles.index} aria-label="Experiment sections">
+        {GROUPS.map((group, i) => (
+          <a key={group.title} href={`#${indexId}-group-${i}`}>
+            {group.title}
+            <span>{view.experiments.filter((e) => group.phases.includes(e.phase)).length}</span>
+          </a>
+        ))}
+      </nav>
       {GROUPS.map((group, i) => {
         const members = view.experiments.filter((e) => group.phases.includes(e.phase));
         return (
-          <Group key={group.title} title={group.title} count={members.length} lead={i === 0}>
+          <Group key={group.title} anchorId={`${indexId}-group-${i}`} title={group.title} count={members.length} lead={i === 0}>
             {members.length === 0 ? (
               <p className={styles.empty}>{group.empty}</p>
             ) : (
@@ -107,10 +113,10 @@ function Experiments({ view, decide }: { view: View; decide: ApprovalTransport |
   );
 }
 
-function Group({ title, count, lead, children }: { title: string; count: number; lead: boolean; children: ReactNode }) {
+function Group({ title, anchorId, count, lead, children }: { title: string; anchorId: string; count: number; lead: boolean; children: ReactNode }) {
   const id = useId();
   return (
-    <section className={styles.group} aria-labelledby={id} data-lead={lead || undefined} data-empty={count === 0 || undefined}>
+    <section id={anchorId} className={styles.group} aria-labelledby={id} data-lead={lead || undefined} data-empty={count === 0 || undefined}>
       <h2 id={id} className={styles.groupTitle}>
         {title} <span className={styles.count}>({count})</span>
       </h2>
@@ -160,23 +166,22 @@ function ExperimentCard({ experiment, decide }: { experiment: Experiment; decide
         <h3 id={headingId} className={styles.title}>
           {intervention.description}
         </h3>
-        <p className={styles.phaseText}>{PHASE_LABELS[experiment.phase].description}</p>
-        <StageTrack label="Where this experiment is" steps={lifecycle(experiment)} className={styles.track} />
       </header>
-
+      <Disclosure title="Details" open={experiment.phase === "AWAITING_APPROVAL"}>
+      <StageTrack label="Where this experiment is" steps={lifecycle(experiment)} className={styles.track} />
       <div className={styles.body} data-deciding={deciding || undefined}>
         <div className={styles.spec}>
           <dl className={styles.cells}>
             <Fact icon="undo" term="Can it be undone?" strong={!intervention.reversible}>
-              {intervention.reversible ? "Yes. It can be stopped and undone at any time." : "No. It could not be undone."}
+              {intervention.reversible ? "Yes" : "No"}
             </Fact>
-            <Fact icon="clock" term="Longest it runs">
+            <Fact icon="clock" term="Duration">
               {days} {days === 1 ? "day" : "days"}
             </Fact>
-            <Fact icon="weight" term="Effort for your family">
+            <Fact icon="weight" term="Effort">
               {BURDEN_LABELS[intervention.burden]}
             </Fact>
-            <Fact icon="flask" term="Kind of change">
+            <Fact icon="flask" term="Change">
               {CATEGORY_LABELS[intervention.category]}
             </Fact>
           </dl>
@@ -316,6 +321,7 @@ function ExperimentCard({ experiment, decide }: { experiment: Experiment; decide
           {deciding ? <DecisionPanel experiment={experiment} decide={decide} /> : null}
         </section>
       </div>
+      </Disclosure>
     </article>
   );
 }

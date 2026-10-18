@@ -9,9 +9,10 @@ const recordedTime = new Intl.DateTimeFormat("en-IN", {
 });
 
 /** Persisted phase visits, including loops and stops. Never an inferred execution log. */
-export function InvestigationWorkflow({ investigation: inv, headingLevel: Heading = "h3" }: {
+export function InvestigationWorkflow({ investigation: inv, headingLevel: Heading = "h3", collapsed = false }: {
   investigation: Investigation;
   headingLevel?: "h3" | "h4";
+  collapsed?: boolean;
 }) {
   const id = useId();
   const history = inv.phase_history ?? [];
@@ -31,7 +32,7 @@ export function InvestigationWorkflow({ investigation: inv, headingLevel: Headin
       {history.length === 0 ? (
         <p className={styles.note}>Earlier steps were not included in this record. Only the current stage is available.</p>
       ) : (
-        <details className={styles.history} open>
+        <details className={styles.history} open={!collapsed}>
           <summary>Steps Serene actually took</summary>
           <p className={styles.note}>Shown in recorded order. A step can repeat when Serene needs more evidence. Times are when each step was saved.</p>
           <ol className={styles.steps} aria-label="Recorded investigation steps">

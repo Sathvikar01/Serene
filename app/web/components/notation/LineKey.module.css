@@ -3,8 +3,8 @@
 .key {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
+  gap: var(--space-3);
+  padding: var(--space-4);
   border: 1px solid var(--rule);
   border-radius: var(--radius-md);
   background: var(--ground);
@@ -19,7 +19,7 @@
 
 .list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: var(--space-4) var(--space-6);
   margin: 0;
 }

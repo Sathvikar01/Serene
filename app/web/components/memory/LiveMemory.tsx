@@ -9,7 +9,11 @@ import { useProjections } from "@/lib/projections/useProjections";
 import { MemoryView } from "./MemoryView";
 
 export function LiveMemory() {
-  const { live } = useFamilyRecord();
+  const record = useFamilyRecord();
+  const { live } = record;
+  if (record.status === "loading" || (record.status === "signed-in" && record.children.status === "loading")) {
+    return <MemoryView source={{ status: "loading" }} />;
+  }
   if (!live) return <MemoryView source={UNCONNECTED} />;
   return <ConnectedMemory key={live.childId} {...live} />;
 }

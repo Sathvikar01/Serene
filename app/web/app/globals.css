@@ -139,7 +139,19 @@ html {
   text-size-adjust: 100%;
   scrollbar-color: var(--rule-strong) transparent;
   background: var(--ground);
+  scroll-padding-top: var(--space-4);
+  scrollbar-gutter: stable;
 }
+
+/* Keep native anchor scrolling immediate. Deep evidence links can be opened
+ * in quick succession by keyboard; overlapping smooth scrolls lose the target. */
+body:has(dialog[open]) { overflow: hidden; }
+/* The travelling loader logo takes the header mark's place until handoff. */
+body:has([data-page-loader]) [data-shell-bar] [data-brand-mark] { visibility: hidden; }
+body:has([data-page-loader][data-state="loading"]) { overflow: hidden; }
+:where([id]) { scroll-margin-top: calc(var(--topbar-height) + var(--space-4)); }
+button, input, select, textarea { font: inherit; }
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color: transparent; }
 
 body {
   margin: 0;
@@ -200,6 +212,9 @@ html[data-bloom="play"] body::before {
 h1,
 h2,
 h3,
+h4,
+h5,
+h6,
 p {
   margin: 0;
 }
