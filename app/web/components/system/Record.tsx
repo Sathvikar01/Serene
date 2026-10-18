@@ -28,7 +28,6 @@ export function Reasons({
         return (
           <li key={i} className={styles.reason} data-reason-code={code} data-known={reason.known}>
             <span className={styles.reasonText}>{reason.text}</span>
-            <code className={styles.code}>{code}</code>
           </li>
         );
       })}
@@ -58,9 +57,9 @@ export function Time({ iso }: { iso: string }) {
 }
 
 /** A link onward to another part of Serene, with its arrow. */
-export function Onward({ href, children }: { href: string; children: ReactNode }) {
+export function Onward({ href, children, ariaLabel }: { href: string; children: ReactNode; ariaLabel?: string }) {
   return (
-    <a href={href} className="onward-link">
+    <a href={href} className="onward-link" aria-label={ariaLabel}>
       {children}
       <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
         <path d="M3 8h10M9 4l4 4-4 4" />

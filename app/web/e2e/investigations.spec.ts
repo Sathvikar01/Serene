@@ -35,6 +35,8 @@ test("Today shows every element of the current investigation, cleanly", async ({
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.getByRole("status").filter({ hasText: "Live" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: first.question })).toBeVisible();
+  await expect(page.locator('[data-block="hypotheses"]')).not.toBeVisible();
+  await page.getByText("Evidence and workflow", { exact: true }).click();
   for (const name of ["workflow", "next-action", "uncertainty", "hypotheses", "missing-evidence", "verification"]) {
     await expect(page.locator(`[data-block="${name}"]`)).toBeVisible();
   }
@@ -46,7 +48,7 @@ test("Today shows every element of the current investigation, cleanly", async ({
   await expect(workflow.getByRole("status")).toContainText("Waiting for you");
   await expect(workflow.locator("[data-workflow-sequence]")).toHaveCount(first.phase_history.length);
   await expect(workflow.locator("[data-workflow-sequence]").first()).toBeVisible();
-  // The default is expanded; keyboard users can collapse and reopen the history.
+  // Today keeps its summary short; keyboard users can open and close the history.
   await workflow.getByText("Steps Serene actually took", { exact: true }).focus();
   await page.keyboard.press("Enter");
   await expect(workflow.locator("[data-workflow-sequence]").first()).not.toBeVisible();

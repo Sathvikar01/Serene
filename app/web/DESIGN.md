@@ -81,7 +81,7 @@ components:
   sheet:
     backgroundColor: "{colors.paper-lifted}"
     rounded: "{rounded.lg}"
-    padding: "24px"
+    padding: "16px"
   nav-link:
     textColor: "{colors.olive-muted}"
     typography: "{typography.label}"
@@ -216,3 +216,13 @@ Entering Serene: the glass, stems, bud, back flower and words fade (320ms); a co
 - **Don't** use sage for text on the light ground.
 - **Don't** add shadows beyond the two lifts, or cards inside cards.
 - **Don't** imply a state before the record holds it: no optimistic stages, no scores, no confidence percentages.
+
+## Working-page density and loading
+
+Keep the original palette, ruled background, uppercase display type and underlined navigation. Page introductions use side-by-side title/context at wide desktop sizes; narrower screens stack naturally. Major section gaps are 24px and working-card insets are 16px. Reset margins for every heading level so browser defaults do not add spacing on top of component gaps. Long investigation evidence uses the full card width below its two short summaries.
+
+The shell owns the loading layer so it can outlive a resolved route boundary. Use the existing photographic BloomMark in the viewport centre, rotating over a 10px blurred page. Once all registered loading work finishes, fade the backdrop and fly the mark to the actual header logo rectangle, then reveal the header mark. Content is available during this brief return flight; there is no minimum loading delay. Reduced motion disables rotation and travel. A new request cancels the return and recentres the logo.
+
+Primary working pages use a title without repeated introductory copy. Today shows the next step and remaining uncertainty, with evidence/workflow behind one disclosure. Memory shows the saved lesson, with provenance and history available on demand. Experiment details remain expanded for pending decisions; other records stay compact. Unsafe proposals remain blocked and offer no approval controls. Omit empty context panels. A belief-map explanation appears only after selecting a link. Keep technical reason codes in data attributes rather than visible copy.
+
+The Ask Serene link is visible in the local app header at every supported width. It opens the existing conversation client, which connects to the independently running local agent service. Preserve its saved conversations and server-only credential flow; the web UI must not alter the shared service or launch another Telegram poller.

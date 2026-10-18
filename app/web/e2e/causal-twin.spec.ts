@@ -117,7 +117,7 @@ test("the map draws every category distinctly and keeps refuted links", async ({
 
 test("selecting a link names it for the provenance panel", async ({ page }) => {
   await page.goto(FIXTURE);
-  await expect(panel(page)).not.toHaveAttribute("data-selected-edge-id", /.*/);
+  await expect(panel(page)).toHaveCount(0);
 
   await mapLabel(page, HYP(1)).click();
   await expect(panel(page)).toHaveAttribute("data-selected-edge-id", HYP(1));
@@ -133,7 +133,7 @@ test("selecting a link names it for the provenance panel", async ({ page }) => {
   await expectInsideMap(page, mapLabel(page, HYP(4)));
 
   await panel(page).getByRole("button", { name: "Clear" }).click();
-  await expect(panel(page)).not.toHaveAttribute("data-selected-edge-id", /.*/);
+  await expect(panel(page)).toHaveCount(0);
 });
 
 test("links on the map can be reached and chosen from the keyboard", async ({ page }) => {
@@ -183,8 +183,10 @@ test("on a phone the map reads top to bottom and the panel follows it", async ({
     await expect(page.locator('[data-direction="TB"] .react-flow')).toBeVisible();
     const canvas = (await map(page).boundingBox())!;
     expect(canvas.width).toBeLessThanOrEqual(width);
+    await map(page).locator('button[data-edge-id]').first().click();
+    const selectedCanvas = (await map(page).boundingBox())!;
     const side = (await panel(page).boundingBox())!;
-    expect(side.y).toBeGreaterThanOrEqual(canvas.y + canvas.height);
+    expect(side.y).toBeGreaterThanOrEqual(selectedCanvas.y + selectedCanvas.height);
     const cause = (await map(page).locator('[data-variable="screens_after_dinner"]').boundingBox())!;
     const effect = (await map(page).locator('[data-variable="bedtime_resistance"]').boundingBox())!;
     expect(effect.y).toBeGreaterThan(cause.y);
@@ -244,6 +246,6 @@ test("the provenance panel opens and closes from the keyboard", async ({ page })
 
   await panel(page).getByRole("button", { name: "Clear" }).focus();
   await page.keyboard.press("Escape");
-  await expect(panel(page)).not.toHaveAttribute("data-selected-edge-id", /.*/);
+  await expect(panel(page)).toHaveCount(0);
   await expect(item).toBeFocused();
 });

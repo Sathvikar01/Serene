@@ -30,6 +30,8 @@ test("memory, Dream runs, kept and refused changes are all shown, cleanly", asyn
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("[data-fixture-banner]")).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "What Serene remembers" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Dream runs", includeHidden: true })).not.toBeVisible();
+  await page.locator("summary").filter({ hasText: /^Memory history/ }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Dream runs" })).toBeVisible();
   await expect(page.locator("[data-memory-path]")).toHaveCount(payload.memories.length);
   await expect(page.locator("[data-run-id]")).toHaveCount(payload.dream_runs.length);
@@ -57,6 +59,7 @@ test("memory, Dream runs, kept and refused changes are all shown, cleanly", asyn
 test("provenance can be followed by keyboard, and back", async ({ page }) => {
   await page.goto(FIXTURE);
   const memory = page.locator("[data-memory-path]").first();
+  await memory.getByText("Evidence and source", { exact: true }).click();
   const keptBy = memory.locator("a[data-written-by]");
   await keptBy.focus();
   await page.keyboard.press("Enter");

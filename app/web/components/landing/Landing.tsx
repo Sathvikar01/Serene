@@ -9,8 +9,8 @@ const DESTINATION = "/today";
 
 // The glass, stems, bud and words fade first, so the flower leaves from
 // under clear air rather than popping out from behind frosted glass.
-const FADE_MS = 320;
-const FLIGHT_MS = 1000;
+const FADE_MS = 180;
+const FLIGHT_MS = 480;
 // Long enough for the bar's staggered entrance (AppShell, Wordmark,
 // SurfaceNav) to finish after the flower lands.
 const REVEAL_MS = 1200;
@@ -99,8 +99,12 @@ export function Landing() {
     const target = document.querySelector<HTMLElement>('[data-shell-bar] [data-flower="mark"]');
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    await new Promise((resolve) => window.setTimeout(resolve, FADE_MS));
-    if (flower && target && !still) await flyToMark(flower, target);
+    if (!still) {
+      await new Promise((resolve) => window.setTimeout(resolve, FADE_MS));
+      // A decorative animation must never prevent entry if the browser
+      // cancels it or the logo has changed while navigating.
+      if (flower && target) await flyToMark(flower, target).catch(() => undefined);
+    }
 
     root.dataset.enter = "";
     // The button is about to go; keep keyboard focus at the start of the bar
@@ -126,8 +130,8 @@ export function Landing() {
         What happened, what Serene remembers and what it believes are kept
         apart.
       </p>
-      <button type="button" className={`button ${styles.enter}`} onClick={enter}>
-        Enter Serene
+      <button type="button" className={`button ${styles.enter}`} onClick={enter} aria-disabled={state === "leaving"} aria-busy={state === "leaving"}>
+        {state === "leaving" ? "Opening Serene…" : "Enter Serene"}
         <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
           <path d="M3 8h10M9 4l4 4-4 4" />
         </svg>

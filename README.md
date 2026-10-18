@@ -8,6 +8,11 @@ We used NeatLogs to diagnose evidence-request failures, cfo.ai to model assumed 
 
 ![Animated preview of the Serene landing page](docs/videos/hero-landing.gif)
 
+The animation and Maya screenshot below are historical presentation assets;
+they do not validate the integrated UI or a current external-service run.
+See the [submission evidence audit](docs/final-reconciliation-audit.md) for
+claim classifications and the separate local reconciliation results.
+
 ## The problem
 
 A difficult daycare pickup could reflect fatigue, hunger or transition difficulty.
@@ -110,10 +115,11 @@ and [final audit](docs/final-release-audit.md) distinguish real Auth/Realtime tr
 from scripted model/browser I/O and a public deployment.
 [Implemented UI boundary](docs/architecture.md#experiments-promotion-and-dream).
 
-The final local presentation proves **Today LIVE, Investigations LIVE,
+The historical 12 October 2026 local presentation recorded **Today LIVE, Investigations LIVE,
 Experiments LIVE, Memory/Dream LIVE, Causal Twin LIVE, approval LIVE and
 reconnect/resync LIVE** against real hosted Supabase Auth/RLS/Realtime with
-synthetic records. LIVE describes that transport proof; the canonical Maya
+synthetic records. LIVE describes that dated transport proof; it has not been
+repeated on the #114/#115 integration. The canonical Maya
 external I/O and full 18-beat scenario remain scripted/deterministic.
 
 ## See the canonical Maya story
@@ -266,12 +272,13 @@ change a decision. Inference context is separate private provider processing.
 Supabase RLS scopes reads; ledger writes stay backend-only. Hash chains detect
 tampering but do not notarize history against a host administrator.
 [Privacy and #59 audit](docs/privacy.md), [safety and non-goals](docs/safety.md).
-The final hardening audit updates Next.js/PostCSS and the test runner; the current
-lockfile passes `npm audit` with zero findings.
+The 12 October hardening audit updated Next.js/PostCSS and the test runner and
+recorded zero `npm audit` findings at that revision.
 
 Merged [#108](https://github.com/Sathvikar01/Serene/pull/108) also denies browser
 SELECT on canonical ledger payloads, protects cross-account/child state and
-rejects stale/out-of-order Realtime state. Current secret/PII gates are clean.
+rejects stale/out-of-order Realtime state. Secret/PII results are tied to the
+revision and run recorded in each validation receipt.
 These are tested boundaries, not security certification.
 
 Four required CI checks cover kernel/types/tests/secrets, deterministic Inspect
@@ -282,6 +289,9 @@ Holdout and complete historical Entire coverage are accepted non-blocking
 limitations. The full research regression gate remains unchanged and unpassed.
 There is no public deployment or production-readiness claim. Hosted web transport,
 NeatLogs, Entire and cfo.ai evidence are real; Maya external I/O is scripted.
+Git/Postgres publication is not atomic; failed projection publication requires
+recovery/backfill. Twin relationships with unnamed endpoints remain listed
+without guessed graph endpoints. No fresh hosted/provider validation is claimed.
 The [earlier checklist](docs/final-demo-checklist.md) preserves the stricter audit
 snapshot and is superseded for submission acceptance.
 

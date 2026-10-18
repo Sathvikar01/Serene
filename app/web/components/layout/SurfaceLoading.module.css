@@ -1,47 +1,51 @@
-.loading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-7);
-  max-width: var(--measure);
-  color: var(--rule-strong);
+.overlay {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  z-index: 100;
+  isolation: isolate;
 }
 
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgb(224 223 216 / 0.35);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: opacity 220ms ease-out;
 }
 
-.title {
-  width: 40%;
-  margin-bottom: var(--space-3);
+.logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6rem;
+  height: 6rem;
+  transform: translate(-50%, -50%);
+  will-change: transform;
 }
 
-.lead {
-  width: 90%;
+.spin, .mark { width: 100%; height: 100%; }
+.spin { animation: rotate 2.4s linear infinite; }
+
+.label {
+  position: absolute;
+  top: calc(50% + 4rem);
+  left: var(--space-4);
+  right: var(--space-4);
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
 }
 
-.leadShort {
-  width: 60%;
-}
+.overlay[data-state="returning"] { pointer-events: none; }
+.overlay[data-state="returning"] .backdrop,
+.overlay[data-state="returning"] .label { opacity: 0; }
+.overlay[data-state="returning"] .spin { animation: none; }
 
-.rowShort {
-  width: 70%;
-}
-
-/* Delay the pulse so quick loads never flash an animation. */
-.loading svg {
-  animation: pulse 1.6s ease-in-out 400ms infinite;
-}
-
-@keyframes pulse {
-  50% {
-    opacity: 0.45;
-  }
-}
+@keyframes rotate { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .loading svg {
-    animation: none;
-  }
+  .spin { animation: none; }
+  .backdrop { transition: none; }
 }

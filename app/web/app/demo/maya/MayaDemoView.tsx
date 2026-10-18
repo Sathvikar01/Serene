@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
 import { InvestigationDetail } from "@/components/investigations/InvestigationDetail";
 import { ExperimentsView } from "@/components/experiments/ExperimentsView";
 import { MemoryView } from "@/components/memory/MemoryView";
@@ -60,13 +61,7 @@ export function MayaDemoView() {
   const learnings = state?.memory.memories.filter((memory) => memory.kind === "learning") ?? [];
   const candidates = state?.twinAfter.edges.filter((edge) => edge.status === "CANDIDATE") ?? [];
   return <div className={styles.demo}>
-    <aside className={styles.banner} aria-label="Demo mode">
-      <div>
-        <strong>A made-up example</strong>
-        <p>No real family’s data is shown. The reports and trial records are part of this fictional story.</p>
-      </div>
-    </aside>
-    {loading && <p role="status">Loading the example…</p>}
+    {loading && <SurfaceLoading label="Loading Maya’s story" compact />}
     {error && <div role="alert"><h2>This example is temporarily unavailable</h2><p>Please refresh the page later.</p></div>}
     {state && <>
       <section className={styles.overview} aria-labelledby="shared-summary">
@@ -79,7 +74,7 @@ export function MayaDemoView() {
           <div><dt>What was noticed</dt><dd>{outcomes.length ? outcomes.map((outcome) => <p key={outcome.outcome_id}>{outcome.summary}</p>) : "No outcome has been recorded."}</dd></div>
           <div><dt>What remains uncertain</dt><dd>{candidates.map((edge) => <p key={edge.edge_id}>{edge.relationship}</p>)}This scoped example cannot explain other children or situations.</dd></div>
         </dl>
-        <p className={styles.summaryNote}>This is a fictional child and a recorded example. In real care, parents decide what to try; caregivers, teachers and clinicians can bring their observations and context.</p>
+        <p className={styles.summaryNote}>Parents decide what to try; caregivers, teachers and clinicians can bring their observations and context.</p>
       </section>
       <nav aria-label="Story chapters" className={styles.nav}>
         <ol>

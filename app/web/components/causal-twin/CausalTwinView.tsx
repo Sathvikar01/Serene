@@ -1,5 +1,7 @@
 "use client";
 
+import { SurfaceLoading } from "@/components/layout/SurfaceLoading";
+import { Disclosure } from "@/components/layout/Disclosure";
 import { useCallback, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { EmptyState } from "@/components/layout/EmptyState";
 import { LineKey, type LineKeyEntry } from "@/components/notation/LineKey";
@@ -53,11 +55,7 @@ export function CausalTwinView({ source, ...selection }: CausalTwinViewProps) {
       );
     case "loading":
       return (
-        <div className={styles.loading} role="status">
-          <span className="visually-hidden">Loading the Causal Twin</span>
-          <LineMark certainty="unknown" className={styles.loadingLine} />
-          <LineMark certainty="unknown" className={styles.loadingLine} />
-        </div>
+        <SurfaceLoading label="Loading the Causal Twin" compact />
       );
     case "error":
       return (
@@ -174,13 +172,8 @@ function TwinMap({ twin, selectedEdgeId, onSelectedEdgeChange, renderEdgeDetail 
     <section className={styles.twin} aria-labelledby={headingId}>
       <header className={styles.intro}>
         <h2 id={headingId} className={styles.heading}>
-          What Serene believes now
+          What Serene believes now · {total} {total === 1 ? "link" : "links"}
         </h2>
-        <p>
-          {total === 1 ? "One link is" : `${total} links are`} on record. Each line joins two
-          parts of your child’s days, drawn by how firmly Serene holds it. Refuted links stay on
-          the map, struck through. Choose any link to see why Serene holds it.
-        </p>
       </header>
 
       <div className={styles.mapBar}>
@@ -242,9 +235,9 @@ function TwinMap({ twin, selectedEdgeId, onSelectedEdgeChange, renderEdgeDetail 
             </p>
           )}
         </div>
-        <SelectedLink edge={selected} onClear={clear}>
+        {selected && <SelectedLink edge={selected} onClear={clear}>
           {selected && renderEdgeDetail ? renderEdgeDetail(selected, { selectEdge: choose }) : null}
-        </SelectedLink>
+        </SelectedLink>}
       </div>
 
       <div ref={list} className={styles.listWrap}>
@@ -253,7 +246,7 @@ function TwinMap({ twin, selectedEdgeId, onSelectedEdgeChange, renderEdgeDetail 
           selectedEdgeId={selectedId}
           onSelect={(edgeId) => (edgeId === selectedId ? select(null) : choose(edgeId))}
         />
-        <LineKey title="How to read the map" entries={LINK_KEY} />
+        <Disclosure title="How to read the map"><LineKey title="How to read the map" entries={LINK_KEY} /></Disclosure>
       </div>
     </section>
   );
